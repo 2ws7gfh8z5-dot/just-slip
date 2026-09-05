@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>Just Slip</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: rgba(30, 30, 30, 0.9);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+      user-select: none;
+      -webkit-app-region: drag;
+    }
+
+    .container {
+      text-align: center;
+      padding: 20px;
+      -webkit-app-region: no-drag;
+    }
+
+    .logo {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 12px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+    }
+
+    .title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      opacity: 0.9;
+    }
+
+    .brightness-display {
+      font-size: 36px;
+      font-weight: 300;
+      margin-bottom: 4px;
+    }
+
+    .brightness-label {
+      font-size: 11px;
+      opacity: 0.6;
+      margin-bottom: 16px;
+    }
+
+    .progress-bar {
+      width: 140px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      border-radius: 2px;
+      transition: width 0.2s ease;
+    }
+
+    .hint {
+      font-size: 10px;
+      opacity: 0.5;
+    }
+
+    .hint kbd {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: inherit;
+      font-size: 9px;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .pulse {
+      animation: pulse 0.2s ease;
+    }
+
+    .swipe-indicator {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 20px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .swipe-indicator.visible {
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+  <div class="swipe-indicator" id="swipeIndicator"></div>
+  <div class="container">
+    <div class="logo">☀️</div>
+    <div class="title">Just Slip</div>
+    <div class="brightness-display" id="brightnessValue">50%</div>
+    <div class="brightness-label">Screen Brightness</div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width: 50%"></div>
+    </div>
+    <div class="hint">
+      Swipe ↑↓ on trackpad or use <kbd>Ctrl</kbd>+<kbd>Opt</kbd>+<kbd>↑↓</kbd>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
