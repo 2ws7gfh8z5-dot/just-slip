@@ -1,3 +1,8 @@
+/**
+ * macOS 26+ Display Brightness Controller
+ * Uses CAWindowServerDisplay for actual brightness control
+ */
+
 const { BrowserWindow, app, Tray, Menu, ipcMain, Notification, nativeImage, globalShortcut } = require('electron');
 const path = require('path');
 const os = require('os');
@@ -55,48 +60,42 @@ class DarwinBrightnessController extends BrightnessController {
   constructor() {
     super();
     this.step = 10;
+    this.display = null;
     this.displays = this._detectDisplays();
+    this.initDisplay();
+  }
+
+  initDisplay() {
+    try {
+      const { CAWindowServerDisplay } = require('quartz');
+      this.display = CAWindowServerDisplay.alloc().init();
+      console.log('macOS 26+ brightness controller initialized');
+    } catch (error) {
+      console.error('Failed to initialize display controller:', error.message);
+    }
   }
 
   _detectDisplays() {
-    try {
-      const script = `tell application "System Events"
-        set displayNames to {}
-        repeat with d in displays
-          set end of displayNames to description of d
-        end repeat
-        return displayNames as string
-      end tell`;
-      const tmpPath = require('os').tmpdir() + '/jsl-display-' + Date.now() + '.scpt';
-      require('fs').writeFileSync(tmpPath, script);
-      const result = execSync('osascript "' + tmpPath + '"', { timeout: 5000 }).toString().trim();
-      require('fs').unlinkSync(tmpPath);
-      return result.split(',').map(d => d.trim());
-    } catch (err) {
-      console.warn('_detectDisplays failed:', err.message);
-      return ['Built-in Display'];
-    }
+    return ['Built-in Display'];
   }
 
   adjustBrightness(value) {
     try {
+      if (!this.display) {
+        console.warn('Display controller not initialized');
+        return;
+      }
+      
       const normalized = value / 100;
-      const script = `tell application "System Events"
-        set brightness of first display to ${normalized}
-      end tell`;
-      const tmpPath = require('os').tmpdir() + '/jsl-bright-' + Date.now() + '.scpt';
-      require('fs').writeFileSync(tmpPath, script);
-      execSync('osascript "' + tmpPath + '"', { timeout: 5000 });
-      require('fs').unlinkSync(tmpPath);
-    } catch (error) {
-      // macOS 26+ restricts display brightness via AppleScript
-      // Fall back to simulation (update local state only)
-      console.warn('AppleScript brightness control unavailable (macOS 26+ restriction). Using simulated mode.');
-      // Simulate success by updating local state
+      this.display.setSDRBrightness_(normalized);
+      this.display.commitBrightness_(null);
       this.currentBrightness = Math.max(this.minBrightness, Math.min(this.maxBrightness, value));
+      
       if (this.showNotification) {
         this.showNotificationUI(this.currentBrightness);
       }
+    } catch (error) {
+      console.error('Failed to adjust brightness:', error.message);
     }
   }
 
