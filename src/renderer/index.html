@@ -10,7 +10,7 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
-      background: rgba(30, 30, 30, 0.92);
+      background: rgba(30, 30, 30, 0.95);
       color: #fff;
       display: flex;
       flex-direction: column;
@@ -26,6 +26,7 @@
       text-align: center;
       padding: 24px;
       -webkit-app-region: no-drag;
+      position: relative;
     }
 
     .logo {
@@ -118,22 +119,399 @@
       opacity: 1;
       transform: translateX(-50%) translateY(-2px);
     }
+
+    /* Settings Button */
+    .settings-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      -webkit-app-region: no-drag;
+    }
+
+    .settings-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: rotate(30deg);
+    }
+
+    .settings-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: rgba(255, 255, 255, 0.7);
+    }
+
+    /* Settings Panel */
+    .settings-panel {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(20, 20, 20, 0.98);
+      border-radius: 16px;
+      padding: 20px;
+      display: none;
+      flex-direction: column;
+      overflow-y: auto;
+      -webkit-app-region: no-drag;
+    }
+
+    .settings-panel.open {
+      display: flex;
+    }
+
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .settings-title {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .close-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+
+    .close-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .settings-section {
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      opacity: 0.5;
+      margin-bottom: 12px;
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .setting-row:last-child {
+      border-bottom: none;
+    }
+
+    .setting-label {
+      font-size: 13px;
+      opacity: 0.85;
+    }
+
+    .setting-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Select Dropdown */
+    select.setting-select {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      color: #fff;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      outline: none;
+    }
+
+    select.setting-select:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    /* Range Slider */
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      background: #667eea;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .range-value {
+      font-size: 11px;
+      opacity: 0.6;
+      min-width: 30px;
+      text-align: center;
+    }
+
+    /* Toggle Switch */
+    .toggle {
+      position: relative;
+      width: 36px;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .toggle.active {
+      background: #667eea;
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      top: 2px;
+      left: 2px;
+      transition: transform 0.2s;
+    }
+
+    .toggle.active::after {
+      transform: translateX(16px);
+    }
+
+    /* Gesture Preview */
+    .gesture-preview {
+      width: 80px;
+      height: 80px;
+      border: 2px dashed rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      margin: 12px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      opacity: 0.6;
+    }
+
+    .gesture-preview.active {
+      border-color: #667eea;
+      opacity: 1;
+    }
+
+    /* Action Buttons */
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(0, 0, 0, 0.8);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 12px;
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
   </style>
 </head>
 <body>
   <div class="swipe-indicator" id="swipeIndicator"></div>
+  
   <div class="container">
-    <div class="logo">☀️</div>
-    <div class="title">Just Slip</div>
-    <div class="brightness-display" id="brightnessValue">50%</div>
-    <div class="brightness-label">Screen Brightness</div>
-    <div class="progress-bar">
-      <div class="progress-fill" id="progressFill" style="width: 50%"></div>
+    <!-- Settings Button -->
+    <button class="settings-btn" id="settingsBtn" title="Settings">
+      <svg viewBox="0 0 24 24">
+        <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+      </svg>
+    </button>
+
+    <div class="container-content" id="containerContent">
+      <div class="logo">☀️</div>
+      <div class="title">Just Slip</div>
+      <div class="brightness-display" id="brightnessValue">50%</div>
+      <div class="brightness-label">Screen Brightness</div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill" style="width: 50%"></div>
+      </div>
+      <div class="hint">
+        <span id="gestureHint">Swipe ↑↓ on trackpad</span>
+        &nbsp;or&nbsp; <kbd>⌃</kbd><kbd>⌥</kbd><kbd>↑↓</kbd>
+      </div>
     </div>
-    <div class="hint">
-      Swipe ↑↓ on trackpad &nbsp;or&nbsp; <kbd>⌃</kbd><kbd>⌥</kbd><kbd>↑↓</kbd>
+
+    <!-- Settings Panel -->
+    <div class="settings-panel" id="settingsPanel">
+      <div class="settings-header">
+        <div class="settings-title">Settings</div>
+        <button class="close-btn" id="closeSettings">
+          <svg width="12" height="12" viewBox="0 0 12 12">
+            <path d="M1.5 1.5l9 9M10.5 1.5l-9 9" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Gesture Settings -->
+      <div class="settings-section">
+        <div class="section-title">Gesture</div>
+        
+        <div class="setting-row">
+          <span class="setting-label">Direction</span>
+          <div class="setting-control">
+            <select class="setting-select" id="gestureType">
+              <option value="vertical">↑↓ Vertical</option>
+              <option value="horizontal">←→ Horizontal</option>
+              <option value="diagonal">↗↙ Diagonal</option>
+              <option value="any">Any Direction</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">Sensitivity</span>
+          <div class="setting-control">
+            <input type="range" id="sensitivity" min="10" max="80" value="30">
+            <span class="range-value" id="sensitivityValue">30px</span>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">Preview</span>
+          <div class="gesture-preview" id="gesturePreview">👆</div>
+        </div>
+      </div>
+
+      <!-- Brightness Settings -->
+      <div class="settings-section">
+        <div class="section-title">Brightness</div>
+        
+        <div class="setting-row">
+          <span class="setting-label">Step Size</span>
+          <div class="setting-control">
+            <input type="range" id="stepSize" min="1" max="20" value="5">
+            <span class="range-value" id="stepSizeValue">5%</span>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">Min Brightness</span>
+          <div class="setting-control">
+            <input type="range" id="minBrightness" min="0" max="50" value="0">
+            <span class="range-value" id="minBrightnessValue">0%</span>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">Max Brightness</span>
+          <div class="setting-control">
+            <input type="range" id="maxBrightness" min="50" max="100" value="100">
+            <span class="range-value" id="maxBrightnessValue">100%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- UI Settings -->
+      <div class="settings-section">
+        <div class="section-title">Interface</div>
+        
+        <div class="setting-row">
+          <span class="setting-label">Show Notification</span>
+          <div class="toggle" id="toggleNotification"></div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">Notification Position</span>
+          <div class="setting-control">
+            <select class="setting-select" id="notifPosition">
+              <option value="top">Top</option>
+              <option value="center">Center</option>
+              <option value="bottom">Bottom</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="btn-group">
+        <button class="btn btn-secondary" id="resetBtn">Reset</button>
+        <button class="btn btn-primary" id="saveBtn">Save</button>
+      </div>
     </div>
   </div>
+
+  <div class="toast" id="toast"></div>
   <script src="renderer.js"></script>
 </body>
 </html>

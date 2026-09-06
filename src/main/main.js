@@ -1,12 +1,16 @@
 /**
- * Just Slip - Cross-Platform Brightness Control
+ * Just Slip - Cross-Platform Brightness Control (v2.1.0)
  * Uses Python brightness.py script for actual control (macOS/Windows/Linux)
+ * Added: Custom gesture settings, settings panel UI
  */
 
 const { BrowserWindow, app, Tray, Menu, ipcMain, Notification, nativeImage, globalShortcut } = require('electron');
 const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
+
+// Import settings manager
+const { settingsManager, setupSettingsHandlers, DEFAULT_SETTINGS } = require('./settings');
 
 // Get the path to the brightness control script
 const BRIGHTNESS_SCRIPT = path.join(__dirname, 'brightness.py');
@@ -23,19 +27,23 @@ class BrightnessController {
   }
 
   increase() {
-    this.currentBrightness = Math.min(this.maxBrightness, this.currentBrightness + this.step);
+    const step = settingsManager.get('brightness.step') || 5;
+    this.currentBrightness = Math.min(this.maxBrightness, this.currentBrightness + step);
     this.set(this.currentBrightness);
     return this.currentBrightness;
   }
 
   decrease() {
-    this.currentBrightness = Math.max(this.minBrightness, this.currentBrightness - this.step);
+    const step = settingsManager.get('brightness.step') || 5;
+    this.currentBrightness = Math.max(this.minBrightness, this.currentBrightness - step);
     this.set(this.currentBrightness);
     return this.currentBrightness;
   }
 
   set(value) {
-    this.currentBrightness = Math.max(this.minBrightness, Math.min(this.maxBrightness, value));
+    const min = settingsManager.get('brightness.min') || 0;
+    const max = settingsManager.get('brightness.max') || 100;
+    this.currentBrightness = Math.max(min, Math.min(max, value));
     this.adjustBrightness(this.currentBrightness);
     if (this.showNotification) {
       this.showNotificationUI(this.currentBrightness);
@@ -73,7 +81,7 @@ class BrightnessController {
     new Notification({
       title: 'Just Slip',
       body: `Brightness: ${value}%`,
-      subtitle: value > (this.currentBrightness - this.step) ? '↑ Brighter' : '↓ Dimmer'
+      subtitle: '✓'
     }).show();
   }
 }
@@ -97,7 +105,7 @@ class DarwinBrightnessController extends BrightnessController {
       this.currentBrightness = value;
     } catch (error) {
       console.error('Failed to adjust macOS brightness:', error.message);
-      this.currentBrightness = value; // Update local state
+      this.currentBrightness = value;
     }
   }
 }
@@ -323,6 +331,7 @@ function teardownGlobalShortcuts() {
 }
 
 function setupIpcHandlers() {
+  // Brightness handlers
   ipcMain.handle('brightness:increase', () => brightnessController?.increase());
   ipcMain.handle('brightness:decrease', () => brightnessController?.decrease());
   ipcMain.handle('brightness:set', (_, value) => brightnessController?.set(value));
@@ -330,6 +339,9 @@ function setupIpcHandlers() {
   ipcMain.handle('displays:get', () => brightnessController?.getDisplayList() || []);
   ipcMain.on('window:close', () => mainWindow?.close());
   ipcMain.on('window:minimize', () => mainWindow?.minimize());
+
+  // Settings handlers
+  setupSettingsHandlers();
 }
 
 // Touch/gesture handling
@@ -422,4 +434,4 @@ app.on('will-quit', () => {
   isRunning = false;
 });
 
-console.log('Just Slip started on', os.platform());
+console.log('Just Slip v2.1.0 started on', os.platform());

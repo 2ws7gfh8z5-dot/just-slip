@@ -1,7 +1,7 @@
 {
   "name": "just-slip",
-  "version": "2.0.0",
-  "description": "Control screen brightness with trackpad gestures - Cross-platform",
+  "version": "2.1.0",
+  "description": "Control screen brightness with trackpad gestures - Cross-platform with customizable gestures",
   "main": "dist/main/main.js",
   "scripts": {
     "dev": "concurrently \"tsc -w -p tsconfig.main.json\" \"tsc -w -p tsconfig.renderer.json\" \"electron .\"",
