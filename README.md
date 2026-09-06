@@ -6,7 +6,15 @@
 [![License](https://img.shields.io/github/license/2ws7gfh8z5-dot/just-slip)](LICENSE)
 [![Three.js](https://img.shields.io/badge/3D-Three.js-green)](https://threejs.org/)
 
+> 🎮 Part of the **"just"** product series — tools designed for simplicity and elegance.
+
 **Control screen brightness AND volume with customizable trackpad gestures. Features a stunning Three.js 3D interface with learning capabilities.**
+
+---
+
+### 🔗 Just 系列
+- **just-paste** (Clone) — [GitHub](https://github.com/2ws7gfh8z5-dot/PasteClone) | Native macOS clipboard history manager
+- **just-slip** — [GitHub](https://github.com/2ws7gfh8z5-dot/just-slip) | Trackpad gesture control (当前项目)
 
 ## ✨ What's New in v3.0.0
 
