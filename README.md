@@ -1,11 +1,31 @@
+# 🌐 语言选择 | Language Selection | 言語選択
+
+<div align="center">
+
+| 🇺🇸 English | 🇨🇳 简体中文 | 🇹🇼 繁體中文 | 🇯🇵 日本語 | 🇰🇷 한국어 |
+|:---:|:---:|:---:|:---:|:---:|
+| [English](README.md) | [简体中文](README_zh-CN.md) | [繁體中文](README_zh-TW.md) | [日本語](README_ja.md) | [한국어](README_ko.md) |
+
+| 🇪🇸 Español | 🇫🇷 Français | 🇩🇪 Deutsch | 🇷🇺 Русский | 🇧🇷 Português |
+|:---:|:---:|:---:|:---:|:---:|
+| [Español](README_es.md) | [Français](README_fr.md) | [Deutsch](README_de.md) | [Русский](README_ru.md) | [Português](README_pt-BR.md) |
+
+| 🇮🇹 Italiano | 🇹🇷 Türkçe | 🇸🇦 العربية | 🇮🇳 हिन्दी | 🇻🇳 Tiếng Việt |
+|:---:|:---:|:---:|:---:|:---:|
+| [Italiano](README_it.md) | [Türkçe](README_tr.md) | [العربية](README_ar.md) | [हिन्दी](README_hi.md) | [Tiếng Việt](README_vi.md) |
+
+</div>
+
+---
+
+<a id="english"></a>
+
 # Just Slip
 
-<p align="center">
-  <img src="https://img.shields.io/github/v/release/2ws7gfh8z5-dot/just-slip" alt="Latest Version">
-  <img src="https://img.shields.io/github/downloads/2ws7gfh8z5-dot/just-slip/total" alt="Downloads">
-  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue" alt="Platforms">
-  <a href="https://github.com/2ws7gfh8z5-dot/just-slip/blob/main/LICENSE"><img src="https://img.shields.io/github/license/2ws7gfh8z5-dot/just-slip" alt="License"></a>
-</p>
+[![Latest Version](https://img.shields.io/github/v/release/2ws7gfh8z5-dot/just-slip)](https://github.com/2ws7gfh8z5-dot/just-slip/releases)
+[![Downloads](https://img.shields.io/github/downloads/2ws7gfh8z5-dot/just-slip/total)](https://github.com/2ws7gfh8z5-dot/just-slip/releases)
+[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue)](#)
+[![License](https://img.shields.io/github/license/2ws7gfh8z5-dot/just-slip)](LICENSE)
 
 Control screen brightness with trackpad gestures. A minimal, cross-platform Electron application.
 
