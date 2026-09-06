@@ -79,8 +79,7 @@
           "arch": ["x64"]
         }
       ],
-      "artifactName": "Just-Slip-${version}-windows-x64.exe",
-      "icon": "assets/icon.ico"
+      "artifactName": "Just-Slip-${version}-windows-x64.exe"
     },
     "linux": {
       "target": [
