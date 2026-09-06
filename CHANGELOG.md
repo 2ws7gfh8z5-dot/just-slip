@@ -10,11 +10,18 @@
 - **Settings panel UI**: Built-in settings dialog accessible via gear icon
 - **Live preview**: Real-time brightness preview while swiping
 - **Toast notifications**: Visual feedback when settings are saved
+- **Cross-platform builds**: macOS DMG, Windows EXE, Linux AppImage
+
+### 🌐 Platforms Supported
+- **macOS**: DMG installer (Intel & Apple Silicon) - 357 MB
+- **Windows**: Portable EXE (x64) - 66 MB
+- **Linux**: AppImage (x64) - 99 MB
 
 ### 🔧 Changed
 - Improved gesture detection engine with support for multiple directions
 - Settings persisted to disk and loaded on startup
 - Enhanced renderer with full settings management
+- Better TypeScript configuration
 
 ### 📦 Files
 - Added `src/main/settings.js` - Settings manager
