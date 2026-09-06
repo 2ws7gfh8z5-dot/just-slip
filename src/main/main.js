@@ -1,12 +1,15 @@
 /**
- * macOS 26+ Display Brightness Controller
- * Uses CAWindowServerDisplay for actual brightness control
+ * Just Slip - Cross-Platform Brightness Control
+ * Uses Python brightness.py script for actual control (macOS/Windows/Linux)
  */
 
 const { BrowserWindow, app, Tray, Menu, ipcMain, Notification, nativeImage, globalShortcut } = require('electron');
 const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
+
+// Get the path to the brightness control script
+const BRIGHTNESS_SCRIPT = path.join(__dirname, 'brightness.py');
 
 // Platform-specific brightness control
 class BrightnessController {
@@ -16,6 +19,7 @@ class BrightnessController {
     this.maxBrightness = 100;
     this.step = 5;
     this.showNotification = false;
+    this.platform = os.platform();
   }
 
   increase() {
@@ -48,54 +52,20 @@ class BrightnessController {
   }
 
   adjustBrightness(value) {
-    throw new Error('Must be implemented by subclass');
-  }
-
-  showNotificationUI(value) {
-    // Implemented by platform-specific subclasses
-  }
-}
-
-class DarwinBrightnessController extends BrightnessController {
-  constructor() {
-    super();
-    this.step = 10;
-    this.display = null;
-    this.displays = this._detectDisplays();
-    this.initDisplay();
-  }
-
-  initDisplay() {
+    // Use Python script for cross-platform control
     try {
-      const { CAWindowServerDisplay } = require('quartz');
-      this.display = CAWindowServerDisplay.alloc().init();
-      console.log('macOS 26+ brightness controller initialized');
-    } catch (error) {
-      console.error('Failed to initialize display controller:', error.message);
-    }
-  }
-
-  _detectDisplays() {
-    return ['Built-in Display'];
-  }
-
-  adjustBrightness(value) {
-    try {
-      if (!this.display) {
-        console.warn('Display controller not initialized');
-        return;
-      }
-      
-      const normalized = value / 100;
-      this.display.setSDRBrightness_(normalized);
-      this.display.commitBrightness_(null);
-      this.currentBrightness = Math.max(this.minBrightness, Math.min(this.maxBrightness, value));
-      
-      if (this.showNotification) {
-        this.showNotificationUI(this.currentBrightness);
+      const result = execSync(`python3 "${BRIGHTNESS_SCRIPT}" set ${value}`, { 
+        timeout: 10000 
+      }).toString().trim();
+      if (result === 'OK') {
+        console.log(`Set brightness to ${value}%`);
+      } else {
+        console.warn('Brightness control returned:', result);
       }
     } catch (error) {
       console.error('Failed to adjust brightness:', error.message);
+      // Update local state anyway
+      this.currentBrightness = value;
     }
   }
 
@@ -103,15 +73,36 @@ class DarwinBrightnessController extends BrightnessController {
     new Notification({
       title: 'Just Slip',
       body: `Brightness: ${value}%`,
-      subtitle: value > this.currentBrightness ? '↑ Brighter' : '↓ Dimmer'
+      subtitle: value > (this.currentBrightness - this.step) ? '↑ Brighter' : '↓ Dimmer'
     }).show();
-  }
-
-  getDisplayList() {
-    return this.displays;
   }
 }
 
+// macOS-specific controller with additional Quartz support
+class DarwinBrightnessController extends BrightnessController {
+  constructor() {
+    super();
+    this.step = 10;
+    this.displays = ['Built-in Display'];
+  }
+
+  adjustBrightness(value) {
+    try {
+      const result = execSync(`python3 "${BRIGHTNESS_SCRIPT}" set ${value}`, { 
+        timeout: 10000 
+      }).toString().trim();
+      if (result === 'OK') {
+        console.log(`Set macOS brightness to ${value}%`);
+      }
+      this.currentBrightness = value;
+    } catch (error) {
+      console.error('Failed to adjust macOS brightness:', error.message);
+      this.currentBrightness = value; // Update local state
+    }
+  }
+}
+
+// Linux-specific controller
 class LinuxBrightnessController extends BrightnessController {
   constructor() {
     super();
@@ -146,54 +137,16 @@ class LinuxBrightnessController extends BrightnessController {
   }
 
   adjustBrightness(value) {
-    if (this.useDdcutil && this.displays.length > 0) {
-      this._setBrightnessDdcutil(value);
-    } else {
-      this._setBrightnessXrandr(value);
-    }
-  }
-
-  _setBrightnessXrandr(value) {
     try {
-      const normalized = value / 100;
-      const display = this.displays[0] || 'default';
-      execSync(`xrandr --output ${display} --brightness ${normalized}`, { timeout: 5000 });
-    } catch (error) {
-      console.error('xrandr failed:', error.message);
-      this._setBrightnessProc(value);
-    }
-  }
-
-  _setBrightnessProc(value) {
-    try {
-      const fs = require('fs');
-      const backlightPath = '/sys/class/backlight';
-      if (fs.existsSync(backlightPath)) {
-        const devices = fs.readdirSync(backlightPath);
-        if (devices.length > 0) {
-          const maxBrightness = parseInt(
-            fs.readFileSync(path.join(backlightPath, devices[0], 'max_brightness'), 'utf8')
-          );
-          const newBrightness = Math.round((value / 100) * maxBrightness);
-          fs.writeFileSync(
-            path.join(backlightPath, devices[0], 'brightness'),
-            newBrightness.toString()
-          );
-          return;
-        }
+      const result = execSync(`python3 "${BRIGHTNESS_SCRIPT}" set ${value}`, {
+        timeout: 10000
+      }).toString().trim();
+      if (result === 'OK') {
+        this.currentBrightness = value;
       }
     } catch (error) {
-      console.error('sysfs failed:', error.message);
-    }
-    console.warn('Could not adjust brightness. Try: xrandr --output <display> --brightness <value>');
-  }
-
-  _setBrightnessDdcutil(value) {
-    try {
-      execSync(`ddcutil setvcp 10 ${Math.round(value)}`, { timeout: 5000 });
-    } catch (error) {
-      console.error('ddcutil failed:', error.message);
-      this._setBrightnessXrandr(value);
+      console.error('Failed to adjust Linux brightness:', error.message);
+      this.currentBrightness = value;
     }
   }
 
@@ -204,79 +157,28 @@ class LinuxBrightnessController extends BrightnessController {
       // Silent fallback
     }
   }
-
-  getDisplayList() {
-    return this.displays;
-  }
 }
 
+// Windows-specific controller
 class WindowsBrightnessController extends BrightnessController {
   constructor() {
     super();
     this.displays = ['Primary Display'];
-    this.useDdcutil = this._checkDdcutil();
-  }
-
-  _checkDdcutil() {
-    try {
-      execSync('ddcutil --version', { timeout: 2000 });
-      return true;
-    } catch {
-      return false;
-    }
   }
 
   adjustBrightness(value) {
-    if (this.useDdcutil) {
-      this._setBrightnessDdcutil(value);
-    } else {
-      this._setBrightnessNative(value);
-    }
-  }
-
-  _setBrightnessNative(value) {
     try {
-      const script = `
-        const brightness = ${value};
-        const param = {
-          Namespace: "root\\wmi",
-          Class: "WmiMonitorBrightness",
-          Filter: "IsInstance = 1"
-        };
-        const device = Get-WmiObject -Query "SELECT * FROM WmiMonitorBrightness WHERE IsInstance = 1";
-        if (device) {
-          device.SetBrightness(brightness);
-        } else {
-          const methods = Get-WmiObject -Query "SELECT * FROM WmiMonitorBrightnessMethods WHERE IsInstance = 1";
-          methods.WmiSetBrightness(1, $brightness);
-        }
-      `;
-      execSync(`powershell -ExecutionPolicy Bypass -Command ${JSON.stringify(script)}`, { timeout: 10000 });
+      const scriptPath = BRIGHTNESS_SCRIPT.replace(/\\/g, '/');
+      const result = execSync(`python "${scriptPath}" set ${value}`, {
+        timeout: 10000
+      }).toString().trim();
+      if (result === 'OK') {
+        this.currentBrightness = value;
+      }
     } catch (error) {
-      console.error('Windows native brightness adjustment failed:', error.message);
+      console.error('Failed to adjust Windows brightness:', error.message);
+      this.currentBrightness = value;
     }
-  }
-
-  _setBrightnessDdcutil(value) {
-    try {
-      execSync(`ddcutil setvcp 10 ${Math.round(value)}`, { timeout: 5000 });
-    } catch (error) {
-      console.error('ddcutil on Windows failed:', error.message);
-      this._setBrightnessNative(value);
-    }
-  }
-
-  showNotificationUI(value) {
-    try {
-      const script = `[System.Windows.Forms.ToolTip]::new().Text = 'Just Slip - Brightness: ${value}%'`;
-      execSync(`powershell -Command ${JSON.stringify(script)}`, { timeout: 5000 });
-    } catch {
-      // Silent fallback
-    }
-  }
-
-  getDisplayList() {
-    return this.displays;
   }
 }
 
@@ -385,18 +287,35 @@ function createTray() {
 }
 
 function setupGlobalShortcuts() {
-  globalShortcut.register('Control+Option+Up', () => {
-    brightnessController?.increase();
-  });
-  globalShortcut.register('Control+Option+Down', () => {
-    brightnessController?.decrease();
-  });
-  globalShortcut.register('Control+Shift+Up', () => {
-    brightnessController?.increase();
-  });
-  globalShortcut.register('Control+Shift+Down', () => {
-    brightnessController?.decrease();
-  });
+  // macOS uses Cmd+Opt arrows, Windows/Linux uses Ctrl+Alt arrows
+  if (os.platform() === 'darwin') {
+    globalShortcut.register('Command+Option+Up', () => {
+      brightnessController?.increase();
+    });
+    globalShortcut.register('Command+Option+Down', () => {
+      brightnessController?.decrease();
+    });
+    globalShortcut.register('Command+Shift+Up', () => {
+      brightnessController?.increase();
+    });
+    globalShortcut.register('Command+Shift+Down', () => {
+      brightnessController?.decrease();
+    });
+  } else {
+    // Windows/Linux
+    globalShortcut.register('Control+Alt+Up', () => {
+      brightnessController?.increase();
+    });
+    globalShortcut.register('Control+Alt+Down', () => {
+      brightnessController?.decrease();
+    });
+    globalShortcut.register('Control+Shift+Up', () => {
+      brightnessController?.increase();
+    });
+    globalShortcut.register('Control+Shift+Down', () => {
+      brightnessController?.decrease();
+    });
+  }
 }
 
 function teardownGlobalShortcuts() {
@@ -503,4 +422,4 @@ app.on('will-quit', () => {
   isRunning = false;
 });
 
-console.log('Just Slip started');
+console.log('Just Slip started on', os.platform());
