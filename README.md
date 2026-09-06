@@ -1,7 +1,7 @@
 # Just Slip
 
 <p align="center">
-  <img src="https://img.shields.io/github/v/release/2ws7gfh8z5-dot/just-slip" alt="Version">
+  <img src="https://img.shields.io/github/v/release/2ws7gfh8z5-dot/just-slip" alt="Latest Version">
   <img src="https://img.shields.io/github/downloads/2ws7gfh8z5-dot/just-slip/total" alt="Downloads">
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue" alt="Platforms">
   <a href="https://github.com/2ws7gfh8z5-dot/just-slip/blob/main/LICENSE"><img src="https://img.shields.io/github/license/2ws7gfh8z5-dot/just-slip" alt="License"></a>
@@ -101,41 +101,6 @@ npm run package:linux  # Linux AppImage
 
 - **Admin rights required**: Run as administrator for WMI access
 - **DDC/CI support**: Install [ddcutil](https://github.com/binhex/ddcutil) for external monitor control
-
-## 🔧 Development
-
-### Project Structure
-
-```
-just-slip/
-├── src/
-│   ├── main/
-│   │   ├── main.js          # Main process (Node.js)
-│   │   ├── brightness.py    # Cross-platform brightness control (Python)
-│   │   └── preload.js       # Context bridge
-│   └── renderer/
-│       ├── index.html       # UI template
-│       └── renderer.ts      # Renderer process (TypeScript)
-├── dist/                    # Compiled output
-├── release/                 # Distribution packages
-└── package.json
-```
-
-### Tech Stack
-
-- **Electron 28**: Cross-platform desktop framework
-- **TypeScript**: Type-safe JavaScript
-- **Python 3**: Cross-platform brightness control via native APIs
-  - macOS: `Quartz` framework (CAWindowServerDisplay)
-  - Linux: `xrandr` / `/sys/class/backlight`
-  - Windows: PowerShell WMI
-
-### Architecture
-
-The application uses a Python bridge script for actual brightness control because:
-1. Node.js doesn't have native access to display brightness APIs
-2. Python's pyobjc (macOS) and subprocess (Linux/Windows) provide reliable control
-3. Cross-platform compatibility through a unified Python interface
 
 ## 📄 License
 
