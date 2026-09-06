@@ -1,7 +1,6 @@
 /**
- * Just Slip - Cross-Platform Brightness Control (v2.1.0)
- * Uses Python brightness.py script for actual control (macOS/Windows/Linux)
- * Added: Custom gesture settings, settings panel UI
+ * Just Slip v3.0.0 - 3D UI with Three.js
+ * Advanced gesture learning, multi-mode (brightness/volume), themes
  */
 
 const { BrowserWindow, app, Tray, Menu, ipcMain, Notification, nativeImage, globalShortcut } = require('electron');
@@ -9,212 +8,194 @@ const path = require('path');
 const os = require('os');
 const { execSync } = require('child_process');
 
-// Import settings manager
+// Import modules
 const { settingsManager, setupSettingsHandlers, DEFAULT_SETTINGS } = require('./settings');
+const GestureEngine = require('./gesture-engine');
 
 // Get the path to the brightness control script
 const BRIGHTNESS_SCRIPT = path.join(__dirname, 'brightness.py');
 
-// Platform-specific brightness control
+// ========== MODE TYPES ==========
+const MODES = {
+  BRIGHTNESS: 'brightness',
+  VOLUME: 'volume'
+};
+
+// ========== THEME CONFIGS ==========
+const THEMES = {
+  ocean: {
+    name: 'Ocean',
+    primary: '#667eea',
+    secondary: '#764ba2',
+    bg: '#0a1628',
+    accent: '#00d4ff',
+    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+  },
+  sunset: {
+    name: 'Sunset',
+    primary: '#f093fb',
+    secondary: '#f5576c',
+    bg: '#1a0a0a',
+    accent: '#ff6b6b',
+    gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'
+  },
+  forest: {
+    name: 'Forest',
+    primary: '#11998e',
+    secondary: '#38ef7d',
+    bg: '#0a1a0a',
+    accent: '#00ff88',
+    gradient: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)'
+  },
+  midnight: {
+    name: 'Midnight',
+    primary: '#2c3e50',
+    secondary: '#4ca1af',
+    bg: '#0d1117',
+    accent: '#00ffcc',
+    gradient: 'linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%)'
+  },
+  neon: {
+    name: 'Neon',
+    primary: '#ff00ff',
+    secondary: '#00ffff',
+    bg: '#0a0a0a',
+    accent: '#ffff00',
+    gradient: 'linear-gradient(135deg, #ff00ff 0%, #00ffff 100%)'
+  }
+};
+
+// ========== MODE-SPECIFIC CONTROLLERS ==========
+
 class BrightnessController {
   constructor() {
-    this.currentBrightness = 50;
-    this.minBrightness = 0;
-    this.maxBrightness = 100;
+    this.currentValue = 50;
+    this.minValue = 0;
+    this.maxValue = 100;
     this.step = 5;
     this.showNotification = false;
     this.platform = os.platform();
   }
 
   increase() {
-    const step = settingsManager.get('brightness.step') || 5;
-    this.currentBrightness = Math.min(this.maxBrightness, this.currentBrightness + step);
-    this.set(this.currentBrightness);
-    return this.currentBrightness;
+    const step = settingsManager.get('brightness.step') || this.step;
+    this.currentValue = Math.min(this.maxValue, this.currentValue + step);
+    this.set(this.currentValue);
+    return this.currentValue;
   }
 
   decrease() {
-    const step = settingsManager.get('brightness.step') || 5;
-    this.currentBrightness = Math.max(this.minBrightness, this.currentBrightness - step);
-    this.set(this.currentBrightness);
-    return this.currentBrightness;
+    const step = settingsManager.get('brightness.step') || this.step;
+    this.currentValue = Math.max(this.minValue, this.currentValue - step);
+    this.set(this.currentValue);
+    return this.currentValue;
   }
 
   set(value) {
-    const min = settingsManager.get('brightness.min') || 0;
-    const max = settingsManager.get('brightness.max') || 100;
-    this.currentBrightness = Math.max(min, Math.min(max, value));
-    this.adjustBrightness(this.currentBrightness);
+    const min = settingsManager.get('brightness.min') || this.minValue;
+    const max = settingsManager.get('brightness.max') || this.maxValue;
+    this.currentValue = Math.max(min, Math.min(max, value));
+    this.adjustBrightness(this.currentValue);
     if (this.showNotification) {
-      this.showNotificationUI(this.currentBrightness);
+      this.showNotificationUI(this.currentValue);
     }
-    return this.currentBrightness;
+    return this.currentValue;
   }
 
   getCurrent() {
-    return this.currentBrightness;
-  }
-
-  getDisplayList() {
-    return ['Main Display'];
+    return this.currentValue;
   }
 
   adjustBrightness(value) {
-    // Use Python script for cross-platform control
     try {
-      const result = execSync(`python3 "${BRIGHTNESS_SCRIPT}" set ${value}`, { 
-        timeout: 10000 
-      }).toString().trim();
+      const result = execSync(`python3 "${BRIGHTNESS_SCRIPT}" set ${value}`, { timeout: 10000 }).toString().trim();
       if (result === 'OK') {
         console.log(`Set brightness to ${value}%`);
-      } else {
-        console.warn('Brightness control returned:', result);
       }
     } catch (error) {
       console.error('Failed to adjust brightness:', error.message);
-      // Update local state anyway
-      this.currentBrightness = value;
+      this.currentValue = value;
     }
   }
 
   showNotificationUI(value) {
-    new Notification({
-      title: 'Just Slip',
-      body: `Brightness: ${value}%`,
-      subtitle: '✓'
-    }).show();
+    new Notification({ title: 'Just Slip', body: `Brightness: ${value}%`, subtitle: '☀️' }).show();
   }
 }
 
-// macOS-specific controller with additional Quartz support
-class DarwinBrightnessController extends BrightnessController {
+class VolumeController {
   constructor() {
-    super();
-    this.step = 10;
-    this.displays = ['Built-in Display'];
+    this.currentValue = 50;
+    this.minValue = 0;
+    this.maxValue = 100;
+    this.step = 5;
+    this.platform = os.platform();
   }
 
-  adjustBrightness(value) {
+  increase() {
+    const step = settingsManager.get('volume.step') || this.step;
+    this.currentValue = Math.min(this.maxValue, this.currentValue + step);
+    this.set(this.currentValue);
+    return this.currentValue;
+  }
+
+  decrease() {
+    const step = settingsManager.get('volume.step') || this.step;
+    this.currentValue = Math.max(this.minValue, this.currentValue - step);
+    this.set(this.currentValue);
+    return this.currentValue;
+  }
+
+  set(value) {
+    const min = settingsManager.get('volume.min') || this.minValue;
+    const max = settingsManager.get('volume.max') || this.maxValue;
+    this.currentValue = Math.max(min, Math.min(max, value));
+    this.adjustVolume(this.currentValue);
+    return this.currentValue;
+  }
+
+  getCurrent() {
+    return this.currentValue;
+  }
+
+  adjustVolume(value) {
     try {
-      const result = execSync(`python3 "${BRIGHTNESS_SCRIPT}" set ${value}`, { 
-        timeout: 10000 
-      }).toString().trim();
-      if (result === 'OK') {
-        console.log(`Set macOS brightness to ${value}%`);
-      }
-      this.currentBrightness = value;
+      // macOS volume control
+      const pct = Math.round((value / 100) * 10);
+      execSync(`osascript -e 'set volume output volume ${pct}'`, { timeout: 5000 });
+      console.log(`Set volume to ${value}%`);
     } catch (error) {
-      console.error('Failed to adjust macOS brightness:', error.message);
-      this.currentBrightness = value;
+      console.error('Failed to adjust volume:', error.message);
+      this.currentValue = value;
     }
   }
 }
 
-// Linux-specific controller
-class LinuxBrightnessController extends BrightnessController {
-  constructor() {
-    super();
-    this.displays = this._detectDisplays();
-    this.useDdcutil = this._checkDdcutil();
-  }
-
-  _detectDisplays() {
-    try {
-      const output = execSync('xrandr --query').toString();
-      const displays = [];
-      const lines = output.split('\n');
-      for (const line of lines) {
-        if (line.includes(' connected')) {
-          const match = line.match(/^(\S+)/);
-          if (match) displays.push(match[1]);
-        }
-      }
-      return displays.length > 0 ? displays : ['default'];
-    } catch {
-      return ['default'];
-    }
-  }
-
-  _checkDdcutil() {
-    try {
-      execSync('ddcutil detect', { timeout: 2000 });
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  adjustBrightness(value) {
-    try {
-      const result = execSync(`python3 "${BRIGHTNESS_SCRIPT}" set ${value}`, {
-        timeout: 10000
-      }).toString().trim();
-      if (result === 'OK') {
-        this.currentBrightness = value;
-      }
-    } catch (error) {
-      console.error('Failed to adjust Linux brightness:', error.message);
-      this.currentBrightness = value;
-    }
-  }
-
-  showNotificationUI(value) {
-    try {
-      execSync(`notify-send "Just Slip" "Brightness: ${value}%"`);
-    } catch {
-      // Silent fallback
-    }
-  }
-}
-
-// Windows-specific controller
-class WindowsBrightnessController extends BrightnessController {
-  constructor() {
-    super();
-    this.displays = ['Primary Display'];
-  }
-
-  adjustBrightness(value) {
-    try {
-      const scriptPath = BRIGHTNESS_SCRIPT.replace(/\\/g, '/');
-      const result = execSync(`python "${scriptPath}" set ${value}`, {
-        timeout: 10000
-      }).toString().trim();
-      if (result === 'OK') {
-        this.currentBrightness = value;
-      }
-    } catch (error) {
-      console.error('Failed to adjust Windows brightness:', error.message);
-      this.currentBrightness = value;
-    }
-  }
-}
-
-// Factory function
-function createBrightnessController() {
-  const platform = os.platform();
-  if (platform === 'darwin') return new DarwinBrightnessController();
-  if (platform === 'linux') return new LinuxBrightnessController();
-  if (platform === 'win32') return new WindowsBrightnessController();
+// ========== FACTORY ==========
+function createModeController(mode) {
+  if (mode === MODES.BRIGHTNESS) return new BrightnessController();
+  if (mode === MODES.VOLUME) return new VolumeController();
   return new BrightnessController();
 }
 
-// Main process
+// ========== MAIN PROCESS ==========
 let mainWindow = null;
 let tray = null;
-let brightnessController = null;
+let modeController = null;
+let currentMode = MODES.BRIGHTNESS;
 let isRunning = false;
+let gestureEngine = new GestureEngine(settingsManager.get());
 
 function createMainWindow() {
   mainWindow = new BrowserWindow({
-    width: 200,
-    height: 100,
+    width: 280,
+    height: 280,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: false,
-    backgroundColor: '#1e1e1e',
+    backgroundColor: '#00000000',
     hasShadow: true,
     webPreferences: {
       nodeIntegration: false,
@@ -238,44 +219,35 @@ function createTray() {
   }
 
   const resizedIcon = icon.resize({ width: 16, height: 16 });
-
   tray = new Tray(resizedIcon);
-  tray.setToolTip('Just Slip - Trackpad Brightness Control');
+  tray.setToolTip('Just Slip v3.0 - Trackpad Control');
 
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: 'Brightness',
+      label: 'Mode',
       submenu: [
-        { label: 'Increase Brightness', click: () => brightnessController?.increase() },
-        { label: 'Decrease Brightness', click: () => brightnessController?.decrease() },
-        { type: 'separator' },
-        { label: 'Reset to 50%', click: () => brightnessController?.set(50) }
+        {
+          label: 'Brightness',
+          type: 'radio',
+          checked: currentMode === MODES.BRIGHTNESS,
+          click: () => switchMode(MODES.BRIGHTNESS)
+        },
+        {
+          label: 'Volume',
+          type: 'radio',
+          checked: currentMode === MODES.VOLUME,
+          click: () => switchMode(MODES.VOLUME)
+        }
       ]
     },
     { type: 'separator' },
     {
-      label: 'Preferences',
+      label: 'Controls',
       submenu: [
-        {
-          type: 'checkbox',
-          label: 'Show notification on change',
-          checked: false,
-          click: (item) => {
-            if (brightnessController) {
-              brightnessController.showNotification = item.checked;
-            }
-          }
-        },
-        {
-          type: 'checkbox',
-          label: 'Show on all workspaces',
-          checked: true,
-          click: (item) => {
-            if (mainWindow) {
-              mainWindow.setVisibleOnAllWorkspaces(item.checked, { visibleOnFullScreen: true });
-            }
-          }
-        }
+        { label: 'Increase', click: () => modeController?.increase() },
+        { label: 'Decrease', click: () => modeController?.decrease() },
+        { type: 'separator' },
+        { label: 'Reset', click: () => modeController?.set(50) }
       ]
     },
     { type: 'separator' },
@@ -285,45 +257,24 @@ function createTray() {
   tray.setContextMenu(contextMenu);
   tray.on('click', () => {
     if (mainWindow) {
-      if (mainWindow.isVisible()) {
-        mainWindow.hide();
-      } else {
-        mainWindow.show();
-      }
+      mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
     }
   });
 }
 
+function switchMode(mode) {
+  currentMode = mode;
+  modeController = createModeController(mode);
+  console.log(`Switched to ${mode} mode`);
+}
+
 function setupGlobalShortcuts() {
-  // macOS uses Cmd+Opt arrows, Windows/Linux uses Ctrl+Alt arrows
-  if (os.platform() === 'darwin') {
-    globalShortcut.register('Command+Option+Up', () => {
-      brightnessController?.increase();
-    });
-    globalShortcut.register('Command+Option+Down', () => {
-      brightnessController?.decrease();
-    });
-    globalShortcut.register('Command+Shift+Up', () => {
-      brightnessController?.increase();
-    });
-    globalShortcut.register('Command+Shift+Down', () => {
-      brightnessController?.decrease();
-    });
-  } else {
-    // Windows/Linux
-    globalShortcut.register('Control+Alt+Up', () => {
-      brightnessController?.increase();
-    });
-    globalShortcut.register('Control+Alt+Down', () => {
-      brightnessController?.decrease();
-    });
-    globalShortcut.register('Control+Shift+Up', () => {
-      brightnessController?.increase();
-    });
-    globalShortcut.register('Control+Shift+Down', () => {
-      brightnessController?.decrease();
-    });
-  }
+  const prefix = os.platform() === 'darwin' ? 'Command+Option' : 'Control+Alt';
+  
+  globalShortcut.register(`${prefix}+Up`, () => modeController?.increase());
+  globalShortcut.register(`${prefix}+Down`, () => modeController?.decrease());
+  globalShortcut.register(`${prefix}+Shift+Up`, () => modeController?.increase());
+  globalShortcut.register(`${prefix}+Shift+Down`, () => modeController?.decrease());
 }
 
 function teardownGlobalShortcuts() {
@@ -331,61 +282,34 @@ function teardownGlobalShortcuts() {
 }
 
 function setupIpcHandlers() {
-  // Brightness handlers
-  ipcMain.handle('brightness:increase', () => brightnessController?.increase());
-  ipcMain.handle('brightness:decrease', () => brightnessController?.decrease());
-  ipcMain.handle('brightness:set', (_, value) => brightnessController?.set(value));
-  ipcMain.handle('brightness:get', () => brightnessController?.getCurrent() || 50);
-  ipcMain.handle('displays:get', () => brightnessController?.getDisplayList() || []);
+  // Mode switching
+  ipcMain.handle('mode:get', () => currentMode);
+  ipcMain.handle('mode:switch', (_, mode) => {
+    switchMode(mode);
+    return currentMode;
+  });
+
+  // Brightness/Volume controls
+  ipcMain.handle('control:increase', () => modeController?.increase());
+  ipcMain.handle('control:decrease', () => modeController?.decrease());
+  ipcMain.handle('control:set', (_, value) => modeController?.set(value));
+  ipcMain.handle('control:get', () => modeController?.getCurrent() || 50);
+
+  // Settings
+  setupSettingsHandlers();
+
+  // Gesture learning
+  ipcMain.handle('gesture:learn', (_, data) => {
+    const result = gestureEngine.learnGesture(data);
+    settingsManager.set('gesture.learnedPattern', result);
+    return result;
+  });
+
+  ipcMain.handle('gesture:getLearned', () => settingsManager.get('gesture.learnedPattern'));
+
+  // Window controls
   ipcMain.on('window:close', () => mainWindow?.close());
   ipcMain.on('window:minimize', () => mainWindow?.minimize());
-
-  // Settings handlers
-  setupSettingsHandlers();
-}
-
-// Touch/gesture handling
-let touchStartY = null;
-let touchStartTime = null;
-
-function setupGestureHandling() {
-  ipcMain.on('touch:start', (_, data) => {
-    touchStartY = data.y;
-    touchStartTime = data.time;
-  });
-
-  ipcMain.on('touch:end', (_, data) => {
-    if (touchStartY === null || touchStartTime === null) return;
-
-    const deltaY = data.y - touchStartY;
-    const deltaTime = data.time - touchStartTime;
-
-    touchStartY = null;
-    touchStartTime = null;
-
-    if (Math.abs(deltaY) < 10) return;
-    if (deltaTime > 500) return;
-
-    if (deltaY < 0) {
-      brightnessController?.increase();
-    } else if (deltaY > 0) {
-      brightnessController?.decrease();
-    }
-  });
-}
-
-// Energy saver override for macOS
-function setupEnergySaverOverride() {
-  if (os.platform() === 'darwin') {
-    try {
-      execSync('caffeinate -dims -w $$', {
-        detached: true,
-        stdio: 'ignore'
-      });
-    } catch (error) {
-      console.warn('Could not set energy saver override:', error.message);
-    }
-  }
 }
 
 // Single instance lock
@@ -407,26 +331,20 @@ if (!gotTheLock) {
 }
 
 app.whenReady().then(() => {
-  brightnessController = createBrightnessController();
+  modeController = createModeController(currentMode);
   setupIpcHandlers();
-  setupGestureHandling();
   setupGlobalShortcuts();
-  setupEnergySaverOverride();
   createMainWindow();
   createTray();
   isRunning = true;
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createMainWindow();
-    }
+    if (BrowserWindow.getAllWindows().length === 0) createMainWindow();
   });
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  if (process.platform !== 'darwin') app.quit();
 });
 
 app.on('will-quit', () => {
@@ -434,4 +352,4 @@ app.on('will-quit', () => {
   isRunning = false;
 });
 
-console.log('Just Slip v2.1.0 started on', os.platform());
+console.log('Just Slip v3.0.0 started on', os.platform());

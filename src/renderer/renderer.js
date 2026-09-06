@@ -1,23 +1,41 @@
 /**
- * Just Slip v3.0.0 - Renderer with Three.js 3D UI
+ * Just Slip v3.0.0 - Renderer (JavaScript with Three.js)
+ * 3D UI, Dual Mode (Brightness/Volume), Gesture Learning, Themes
  */
 
-declare const electronAPI: any;
-declare const THREE: any;
+// Electron API
+const { ipcRenderer } = require('electron');
+const electronAPI = {
+  getMode: () => ipcRenderer.invoke('mode:get'),
+  switchMode: (mode) => ipcRenderer.invoke('mode:switch', mode),
+  increaseControl: () => ipcRenderer.invoke('control:increase'),
+  decreaseControl: () => ipcRenderer.invoke('control:decrease'),
+  setControl: (value) => ipcRenderer.invoke('control:set', value),
+  getControlValue: () => ipcRenderer.invoke('control:get'),
+  getSettings: () => ipcRenderer.invoke('settings:get'),
+  saveSettings: (settings) => ipcRenderer.invoke('settings:set', 'gesture.type', settings.gesture?.type).then(() => settings),
+  resetSettings: () => ipcRenderer.invoke('settings:reset'),
+  learnGesture: (data) => ipcRenderer.invoke('gesture:learn', data),
+  getLearnedGesture: () => ipcRenderer.invoke('gesture:getLearned'),
+  closeWindow: () => ipcRenderer.send('window:close'),
+};
 
 // State
 let currentValue = 50;
-let settings: any = null;
+let settings = null;
 let currentMode = 'brightness';
 let isSettingsOpen = false;
 let isLearningMode = false;
 let touchStartPos = { x: 0, y: 0 };
 let touchStartTime = 0;
 let isTouchActive = false;
-let scene: any, camera: any, renderer: any, mainMesh: any, glowMesh: any, particles: any;
+
+// Three.js variables
+let scene, camera, renderer, mainMesh, glowMesh, particles;
+let animationId;
 
 // Themes
-const THEMES: any = {
+const THEMES = {
   ocean: { primary: '#667eea', secondary: '#764ba2', bg: '#0a1628', accent: '#00d4ff' },
   sunset: { primary: '#f093fb', secondary: '#f5576c', bg: '#1a0a0a', accent: '#ff6b6b' },
   forest: { primary: '#11998e', secondary: '#38ef7d', bg: '#0a1a0a', accent: '#00ff88' },
@@ -41,10 +59,9 @@ async function init() {
 // Three.js Setup
 function initThreeJS() {
   const container = document.getElementById('canvas-container');
-  if (!container) return;
+  if (!container || typeof THREE === 'undefined') return;
 
   scene = new THREE.Scene();
-  
   camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
   camera.position.z = 5;
 
@@ -113,7 +130,7 @@ function initThreeJS() {
 }
 
 function animate() {
-  requestAnimationFrame(animate);
+  animationId = requestAnimationFrame(animate);
   if (mainMesh) {
     mainMesh.rotation.x += 0.005;
     mainMesh.rotation.y += 0.01;
@@ -125,11 +142,13 @@ function animate() {
   if (particles) {
     particles.rotation.y += 0.001;
   }
-  renderer.render(scene, camera);
+  if (renderer && scene && camera) {
+    renderer.render(scene, camera);
+  }
 }
 
-function updateThreeJS(value: number, theme: any) {
-  if (!mainMesh) return;
+function updateThreeJS(value, theme) {
+  if (!mainMesh || !scene) return;
   const primaryColor = new THREE.Color(theme.primary || '#667eea');
   const secondaryColor = new THREE.Color(theme.secondary || '#764ba2');
   mainMesh.material.color.lerpColors(primaryColor, secondaryColor, value / 100);
@@ -139,7 +158,8 @@ function updateThreeJS(value: number, theme: any) {
   const scale = 0.8 + (value / 100) * 0.6;
   mainMesh.scale.set(scale, scale, scale);
   glowMesh.scale.set(scale * 1.2, scale * 1.2, scale * 1.2);
-  const circle = document.getElementById('progressCircle') as HTMLElement;
+  
+  const circle = document.getElementById('progressCircle');
   if (circle) {
     const circumference = 502.65;
     const offset = circumference - (value / 100) * circumference;
@@ -175,13 +195,13 @@ function updateUI() {
     if (valueLabel) valueLabel.textContent = 'System Volume';
   }
   const valueDisplay = document.getElementById('valueDisplay');
-  if (valueDisplay) valueDisplay.textContent = `${currentValue}%`;
+  if (valueDisplay) valueDisplay.textContent = currentValue + '%';
   loadSettingsToUI();
   const theme = THEMES[settings.ui?.theme] || THEMES.ocean;
   updateThreeJS(currentValue, theme);
 }
 
-function applyTheme(themeName: string) {
+function applyTheme(themeName) {
   const theme = THEMES[themeName] || THEMES.ocean;
   document.documentElement.style.setProperty('--primary', theme.primary);
   document.documentElement.style.setProperty('--secondary', theme.secondary);
@@ -191,30 +211,30 @@ function applyTheme(themeName: string) {
 
 function loadSettingsToUI() {
   if (!settings) return;
-  const setVal = (id: string, val: any) => {
-    const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement;
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
     if (el) el.value = String(val);
   };
-  const setTxt = (id: string, val: any) => {
+  const setTxt = (id, val) => {
     const el = document.getElementById(id);
-    if (el) el.textContent = `${val}`;
+    if (el) el.textContent = String(val);
   };
 
   setVal('gestureType', settings.gesture?.type || 'vertical');
   setVal('sensitivity', settings.gesture?.sensitivity || 30);
-  setTxt('sensitivityValue', `${settings.gesture?.sensitivity || 30}px`);
+  setTxt('sensitivityValue', (settings.gesture?.sensitivity || 30) + 'px');
   setVal('stepSize', settings.brightness?.step || 5);
-  setTxt('stepSizeValue', `${settings.brightness?.step || 5}%`);
+  setTxt('stepSizeValue', (settings.brightness?.step || 5) + '%');
   setVal('minBrightness', settings.brightness?.min || 0);
-  setTxt('minBrightnessValue', `${settings.brightness?.min || 0}%`);
+  setTxt('minBrightnessValue', (settings.brightness?.min || 0) + '%');
   setVal('maxBrightness', settings.brightness?.max || 100);
-  setTxt('maxBrightnessValue', `${settings.brightness?.max || 100}%`);
+  setTxt('maxBrightnessValue', (settings.brightness?.max || 100) + '%');
   setVal('volumeStep', settings.volume?.step || 5);
-  setTxt('volumeStepValue', `${settings.volume?.step || 5}%`);
+  setTxt('volumeStepValue', (settings.volume?.step || 5) + '%');
   setVal('volumeMin', settings.volume?.min || 0);
-  setTxt('volumeMinValue', `${settings.volume?.min || 0}%`);
+  setTxt('volumeMinValue', (settings.volume?.min || 0) + '%');
   setVal('volumeMax', settings.volume?.max || 100);
-  setTxt('volumeMaxValue', `${settings.volume?.max || 100}%`);
+  setTxt('volumeMaxValue', (settings.volume?.max || 100) + '%');
 
   const learnToggle = document.getElementById('toggleLearn');
   if (learnToggle) {
@@ -222,7 +242,7 @@ function loadSettingsToUI() {
   }
 
   const activeTheme = settings.ui?.theme || 'ocean';
-  document.querySelectorAll('.theme-option').forEach((el: any) => {
+  document.querySelectorAll('.theme-option').forEach(el => {
     el.classList.toggle('active', el.dataset.theme === activeTheme);
   });
 
@@ -237,19 +257,19 @@ function updateGesturePreview() {
   if (learned) {
     preview.classList.add('learned');
     preview.textContent = getGestureEmoji(learned.direction);
-    hint.textContent = `Learned: ${learned.direction}`;
+    hint.textContent = 'Learned: ' + learned.direction;
   } else {
     preview.classList.remove('learned');
     hint.textContent = isLearningMode ? 'Swipe to learn your gesture...' : 'Swipe to learn your gesture';
   }
 }
 
-function getGestureEmoji(direction: string) {
-  const emojis: any = { up: '⬆️', down: '⬇️', left: '⬅️', right: '➡️' };
+function getGestureEmoji(direction) {
+  const emojis = { up: '⬆️', down: '⬇️', left: '⬅️', right: '➡️' };
   return emojis[direction] || '👆';
 }
 
-function showToast(message: string) {
+function showToast(message) {
   const toast = document.getElementById('toast');
   if (toast) {
     toast.textContent = message;
@@ -258,18 +278,18 @@ function showToast(message: string) {
   }
 }
 
-function getSettingsFromUI(): any {
-  const getVal = (id: string) => {
-    const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement;
+function getSettingsFromUI() {
+  const getVal = (id) => {
+    const el = document.getElementById(id);
     return el ? el.value : null;
   };
-  const getNum = (id: string, def: number) => {
+  const getNum = (id, def) => {
     const v = getVal(id);
     return v ? parseInt(v) : def;
   };
-  const getBool = (id: string) => {
+  const getBool = (id) => {
     const el = document.getElementById(id);
-    return el?.classList.contains('active') || false;
+    return el ? el.classList.contains('active') : false;
   };
 
   return {
@@ -289,7 +309,7 @@ function getSettingsFromUI(): any {
       max: getNum('volumeMax', 100),
     },
     ui: {
-      theme: (document.querySelector('.theme-option.active') as HTMLElement)?.dataset.theme || 'ocean',
+      theme: document.querySelector('.theme-option.active')?.dataset.theme || 'ocean',
     }
   };
 }
@@ -298,12 +318,12 @@ function getSettingsFromUI(): any {
 function setupEventListeners() {
   document.getElementById('settingsBtn')?.addEventListener('click', () => {
     isSettingsOpen = true;
-    (document.getElementById('settingsPanel') as HTMLElement)?.classList.add('open');
+    document.getElementById('settingsPanel')?.classList.add('open');
   });
 
   document.getElementById('closeSettings')?.addEventListener('click', () => {
     isSettingsOpen = false;
-    (document.getElementById('settingsPanel') as HTMLElement)?.classList.remove('open');
+    document.getElementById('settingsPanel')?.classList.remove('open');
   });
 
   document.getElementById('saveBtn')?.addEventListener('click', async () => {
@@ -315,7 +335,7 @@ function setupEventListeners() {
       updateUI();
       showToast('Settings saved ✓');
       isSettingsOpen = false;
-      (document.getElementById('settingsPanel') as HTMLElement)?.classList.remove('open');
+      document.getElementById('settingsPanel')?.classList.remove('open');
     } catch (error) {
       showToast('Failed to save settings');
     }
@@ -332,19 +352,19 @@ function setupEventListeners() {
     }
   });
 
-  document.querySelectorAll('.theme-option').forEach((el: any) => {
+  document.querySelectorAll('.theme-option').forEach(el => {
     el.addEventListener('click', () => {
-      document.querySelectorAll('.theme-option').forEach((e: any) => e.classList.remove('active'));
+      document.querySelectorAll('.theme-option').forEach(e => e.classList.remove('active'));
       el.classList.add('active');
     });
   });
 
-  document.querySelectorAll('.mode-btn').forEach((el: any) => {
+  document.querySelectorAll('.mode-btn').forEach(el => {
     el.addEventListener('click', async () => {
       const mode = el.dataset.mode;
       if (mode && mode !== currentMode) {
         currentMode = await electronAPI.switchMode(mode);
-        document.querySelectorAll('.mode-btn').forEach((btn: any) => {
+        document.querySelectorAll('.mode-btn').forEach(btn => {
           btn.classList.toggle('active', btn.dataset.mode === currentMode);
         });
         updateUI();
@@ -355,18 +375,18 @@ function setupEventListeners() {
   // Range inputs
   const rangeIds = ['sensitivity', 'stepSize', 'minBrightness', 'maxBrightness', 'volumeStep', 'volumeMin', 'volumeMax'];
   rangeIds.forEach(id => {
-    document.getElementById(id)?.addEventListener('input', (e: any) => {
+    document.getElementById(id)?.addEventListener('input', (e) => {
       const txtId = id + 'Value';
       const txtEl = document.getElementById(txtId);
       if (txtEl) {
         const suffix = id === 'sensitivity' ? 'px' : '%';
-        txtEl.textContent = `${e.target.value}${suffix}`;
+        txtEl.textContent = e.target.value + suffix;
       }
     });
   });
 
   // Keyboard
-  document.addEventListener('keydown', async (event: KeyboardEvent) => {
+  document.addEventListener('keydown', async (event) => {
     if (isSettingsOpen) return;
     if (event.key === 'ArrowUp' && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
@@ -382,7 +402,7 @@ function setupEventListeners() {
   });
 
   // Touch
-  document.addEventListener('touchstart', (event: TouchEvent) => {
+  document.addEventListener('touchstart', (event) => {
     if (event.touches.length === 1) {
       touchStartPos = { x: event.touches[0].clientX, y: event.touches[0].clientY };
       touchStartTime = Date.now();
@@ -394,14 +414,13 @@ function setupEventListeners() {
     }
   }, { passive: true });
 
-  document.addEventListener('touchmove', (event: TouchEvent) => {
+  document.addEventListener('touchmove', (event) => {
     if (!isTouchActive || event.touches.length !== 1 || isSettingsOpen) return;
     const deltaX = event.touches[0].clientX - touchStartPos.x;
     const deltaY = event.touches[0].clientY - touchStartPos.y;
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
     const step = settings?.brightness?.step || 5;
     const sensitivity = settings?.gesture?.sensitivity || 30;
-    const change = Math.round((distance / sensitivity) * step);
     let rawValue = currentValue;
     const gestureType = settings?.gesture?.type || 'vertical';
     if (gestureType === 'vertical') rawValue = currentValue - Math.round(deltaY * 0.3);
@@ -413,10 +432,10 @@ function setupEventListeners() {
     }
     const clamped = Math.max(0, Math.min(100, rawValue));
     const valueDisplay = document.getElementById('valueDisplay');
-    if (valueDisplay) valueDisplay.textContent = `${clamped}%`;
+    if (valueDisplay) valueDisplay.textContent = clamped + '%';
   }, { passive: true });
 
-  document.addEventListener('touchend', async (event: TouchEvent) => {
+  document.addEventListener('touchend', async (event) => {
     if (!isTouchActive || isSettingsOpen) return;
     isTouchActive = false;
     const deltaX = event.changedTouches[0].clientX - touchStartPos.x;
@@ -425,6 +444,7 @@ function setupEventListeners() {
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
     const sensitivity = settings?.gesture?.sensitivity || 30;
 
+    // Learn gesture
     if (isLearningMode && distance >= sensitivity) {
       await electronAPI.learnGesture({
         x: event.changedTouches[0].clientX,
@@ -447,7 +467,7 @@ function setupEventListeners() {
     if (deltaTime > 600) return;
 
     const gestureType = settings?.gesture?.type || 'vertical';
-    let action: 'increase' | 'decrease' | null = null;
+    let action = null;
     let direction = 'unknown';
 
     if (gestureType === 'vertical') {
@@ -485,11 +505,11 @@ function setupEventListeners() {
   }, { passive: true });
 }
 
-function updateValueDisplay(value: number) {
+function updateValueDisplay(value) {
   currentValue = value;
   const valueDisplay = document.getElementById('valueDisplay');
-  if (valueDisplay) valueDisplay.textContent = `${value}%`;
-  const theme = THEMES[(settings?.ui?.theme) as keyof typeof THEMES] || THEMES.ocean;
+  if (valueDisplay) valueDisplay.textContent = value + '%';
+  const theme = THEMES[settings?.ui?.theme] || THEMES.ocean;
   updateThreeJS(value, theme);
   const display = document.getElementById('valueDisplay');
   if (display) {
@@ -498,10 +518,10 @@ function updateValueDisplay(value: number) {
   }
 }
 
-function showSwipeIndicator(direction: string) {
+function showSwipeIndicator(direction) {
   const indicator = document.getElementById('swipeIndicator');
   if (!indicator) return;
-  const arrows: any = { up: '⬆️', down: '⬇️', left: '⬅️', right: '➡️' };
+  const arrows = { up: '⬆️', down: '⬇️', left: '⬅️', right: '➡️' };
   indicator.textContent = arrows[direction] || '↕';
   indicator.classList.add('visible');
   setTimeout(() => indicator.classList.remove('visible'), 400);

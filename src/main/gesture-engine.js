@@ -1,6 +1,6 @@
 /**
- * Just Slip - Gesture Engine
- * Handles different gesture types and directions
+ * Just Slip v3.0.0 - Gesture Engine with Learning
+ * Supports custom gesture patterns and auto-learning
  */
 
 class GestureEngine {
@@ -9,7 +9,9 @@ class GestureEngine {
     this.touchStart = null;
     this.touchStartTime = null;
     this.lastGestureTime = 0;
-    this.isProcessing = false;
+    this.gestureHistory = [];
+    this.learnedPattern = null;
+    this.isLearningMode = false;
   }
 
   /**
@@ -32,30 +34,25 @@ class GestureEngine {
     const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
     const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
 
-    return {
-      deltaX,
-      deltaY,
-      distance,
-      angle,
-      direction: this.getDirection(angle, distance)
-    };
+    return { deltaX, deltaY, distance, angle, direction: this.getDirection(angle, distance) };
   }
 
   /**
    * Determine gesture direction based on settings
    */
   getDirection(angle, distance) {
-    const minDistance = this.settings.gesture.sensitivity;
+    const minDistance = this.settings.gesture?.sensitivity || 30;
     
     if (distance < minDistance) return null;
 
-    const type = this.settings.gesture.type;
+    const type = this.settings.gesture?.type || 'vertical';
 
     switch (type) {
       case 'vertical':
-        return angle > -45 && angle <= 45 ? 'right' :
-               angle > 45 && angle <= 135 ? 'down' :
-               angle > -135 && angle <= -45 ? 'up' : 'left';
+        if (angle > -45 && angle <= 45) return 'right';
+        if (angle > 45 && angle <= 135) return 'down';
+        if (angle > -135 && angle <= -45) return 'up';
+        return 'left';
       
       case 'horizontal':
         if (angle > -22.5 && angle <= 22.5) return 'right';
@@ -69,7 +66,6 @@ class GestureEngine {
         return null;
       
       case 'diagonal':
-        // Allow 45° tolerance from diagonal directions
         const normalizedAngle = ((angle % 360) + 360) % 360;
         if (normalizedAngle >= 315 || normalizedAngle < 45) return 'right';
         if (normalizedAngle >= 45 && normalizedAngle < 135) return 'down';
@@ -78,7 +74,6 @@ class GestureEngine {
       
       case 'any':
       default:
-        // Map to cardinal directions
         if (angle > -45 && angle <= 45) return 'right';
         if (angle > 45 && angle <= 135) return 'down';
         if (angle > -135 && angle <= -45) return 'up';
@@ -95,8 +90,8 @@ class GestureEngine {
     const endTime = timestamp || Date.now();
     const deltaTime = endTime - this.touchStartTime;
     
-    // Debounce check
-    if (endTime - this.lastGestureTime < this.settings.advanced.debounceMs) {
+    // Debounce
+    if (endTime - this.lastGestureTime < (this.settings.advanced?.debounceMs || 100)) {
       this.touchStart = null;
       return null;
     }
@@ -110,58 +105,96 @@ class GestureEngine {
     this.touchStart = null;
     this.lastGestureTime = endTime;
 
-    return {
+    // Save to history
+    this.gestureHistory.push({
       direction: estimate.direction,
-      distance: estimate.distance,
       angle: estimate.angle,
-      deltaTime
-    };
+      distance: estimate.distance,
+      time: endTime
+    });
+
+    // Keep only last 5 gestures
+    if (this.gestureHistory.length > 5) {
+      this.gestureHistory.shift();
+    }
+
+    return estimate;
   }
 
   /**
-   * Get gesture action based on direction
+   * Learn from user's gesture pattern
+   */
+  learnGesture(data) {
+    const { x, y, startX, startY, time } = data;
+    const deltaX = x - startX;
+    const deltaY = y - startY;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    const angle = Math.atan2(deltaY, deltaX) * (180 / Math.PI);
+    
+    // Determine direction
+    let direction = 'unknown';
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      direction = deltaX > 0 ? 'right' : 'left';
+    } else {
+      direction = deltaY > 0 ? 'down' : 'up';
+    }
+
+    const pattern = {
+      direction,
+      angle: Math.round(angle),
+      distance: Math.round(distance),
+      isDiagonal: Math.abs(deltaX) > 20 && Math.abs(deltaY) > 20,
+      timestamp: time
+    };
+
+    // Store learned pattern
+    this.learnedPattern = pattern;
+    this.gestureHistory.push(pattern);
+
+    console.log('Learned gesture pattern:', pattern);
+    return pattern;
+  }
+
+  /**
+   * Get action based on gesture result
    */
   getAction(gestureResult) {
     if (!gestureResult) return null;
 
-    const { direction } = gestureResult;
-    const type = this.settings.gesture.type;
+    const type = this.settings.gesture?.type || 'vertical';
+
+    // If user has learned a custom pattern, use it
+    if (this.learnedPattern && this.settings.gesture?.learnFromFirstSwipe) {
+      if (this.learnedPattern.direction === 'up' || this.learnedPattern.direction === 'right') {
+        return 'increase';
+      }
+      return 'decrease';
+    }
 
     switch (type) {
       case 'vertical':
-        if (direction === 'up') return 'increase';
-        if (direction === 'down') return 'decrease';
-        return null;
-      
+        return gestureResult.direction === 'up' ? 'increase' : 
+               gestureResult.direction === 'down' ? 'decrease' : null;
       case 'horizontal':
-        if (direction === 'right') return 'increase';
-        if (direction === 'left') return 'decrease';
-        return null;
-      
+        return gestureResult.direction === 'right' ? 'increase' : 
+               gestureResult.direction === 'left' ? 'decrease' : null;
       case 'diagonal':
-        // Top-left to bottom-right = increase
-        // Top-right to bottom-left = decrease
-        if (direction === 'down' || direction === 'right') return 'increase';
-        if (direction === 'up' || direction === 'left') return 'decrease';
-        return null;
-      
+        return (gestureResult.direction === 'down' || gestureResult.direction === 'right') ? 'increase' : 'decrease';
       case 'any':
       default:
-        if (direction === 'up' || direction === 'right') return 'increase';
-        if (direction === 'down' || direction === 'left') return 'decrease';
-        return null;
+        return (gestureResult.direction === 'up' || gestureResult.direction === 'right') ? 'increase' : 'decrease';
     }
   }
 
   /**
-   * Calculate brightness change amount
+   * Calculate brightness/volume change amount
    */
-  calculateBrightnessChange(gestureResult) {
-    if (!gestureResult) return this.settings.brightness.step;
+  calculateChange(gestureResult) {
+    if (!gestureResult) return this.settings.brightness?.step || 5;
     
-    // Scale with distance but cap at step * 3
-    const distanceFactor = Math.min(gestureResult.distance / this.settings.gesture.sensitivity, 3);
-    return Math.round(this.settings.brightness.step * distanceFactor);
+    const step = this.settings.brightness?.step || 5;
+    const distanceFactor = Math.min(gestureResult.distance / (this.settings.gesture?.sensitivity || 30), 3);
+    return Math.round(step * distanceFactor);
   }
 
   /**

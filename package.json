@@ -1,7 +1,7 @@
 {
   "name": "just-slip",
-  "version": "2.1.0",
-  "description": "Control screen brightness with trackpad gestures - Cross-platform with customizable gestures",
+  "version": "3.0.0",
+  "description": "Control screen brightness/volume with customizable trackpad gestures - Cross-platform with Three.js 3D UI",
   "main": "dist/main/main.js",
   "scripts": {
     "dev": "concurrently \"tsc -w -p tsconfig.main.json\" \"tsc -w -p tsconfig.renderer.json\" \"electron .\"",
@@ -14,9 +14,11 @@
   },
   "keywords": [
     "brightness",
+    "volume",
     "trackpad",
     "gesture",
     "electron",
+    "threejs",
     "cross-platform",
     "macos",
     "windows",
@@ -36,12 +38,15 @@
     "@types/node": "^20.10.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "@types/three": "^0.160.0",
     "concurrently": "^8.2.2",
     "electron": "^28.0.0",
     "electron-builder": "^24.9.1",
     "typescript": "^5.3.2"
   },
-  "dependencies": {},
+  "dependencies": {
+    "three": "^0.160.0"
+  },
   "build": {
     "appId": "com.justslip.app",
     "productName": "Just Slip",

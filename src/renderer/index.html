@@ -3,150 +3,183 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
-  <title>Just Slip</title>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:;">
+  <title>Just Slip v3.0</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    :root {
+      --primary: #667eea;
+      --secondary: #764ba2;
+      --bg: rgba(10, 22, 40, 0.95);
+      --accent: #00d4ff;
+      --text: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.6);
+    }
+
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
-      background: rgba(30, 30, 30, 0.95);
-      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+      background: transparent;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    #canvas-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* UI Overlay */
+    .ui-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100vh;
-      overflow: hidden;
-      user-select: none;
-      -webkit-app-region: drag;
-    }
-
-    .container {
-      text-align: center;
-      padding: 24px;
-      -webkit-app-region: no-drag;
-      position: relative;
-    }
-
-    .logo {
-      width: 52px;
-      height: 52px;
-      margin: 0 auto 14px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      border-radius: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 26px;
-      box-shadow: 0 4px 20px rgba(102, 126, 234, 0.35);
-    }
-
-    .title {
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      margin-bottom: 6px;
-      opacity: 0.85;
-      text-transform: uppercase;
-    }
-
-    .brightness-display {
-      font-size: 42px;
-      font-weight: 200;
-      margin-bottom: 4px;
-      letter-spacing: -1px;
-    }
-
-    .brightness-label {
-      font-size: 11px;
-      opacity: 0.45;
-      margin-bottom: 18px;
-      letter-spacing: 0.3px;
-    }
-
-    .progress-bar {
-      width: 150px;
-      height: 4px;
-      background: rgba(255, 255, 255, 0.12);
-      border-radius: 2px;
-      overflow: hidden;
-      margin-bottom: 16px;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-      border-radius: 2px;
-      transition: width 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .hint {
-      font-size: 10px;
-      opacity: 0.35;
-      line-height: 1.6;
-    }
-
-    .hint kbd {
-      background: rgba(255, 255, 255, 0.1);
-      padding: 2px 5px;
-      border-radius: 3px;
-      font-family: inherit;
-      font-size: 9px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.06); }
-      100% { transform: scale(1); }
-    }
-
-    .pulse { animation: pulse 0.18s ease; }
-
-    .swipe-indicator {
-      position: absolute;
-      top: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 22px;
-      opacity: 0;
-      transition: opacity 0.15s ease, transform 0.15s ease;
       pointer-events: none;
     }
 
-    .swipe-indicator.visible {
-      opacity: 1;
-      transform: translateX(-50%) translateY(-2px);
+    .ui-overlay > * {
+      pointer-events: auto;
+    }
+
+    /* Main Display */
+    .main-display {
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .mode-indicator {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      opacity: 0.7;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .mode-indicator .icon {
+      font-size: 14px;
+    }
+
+    .value-display {
+      font-size: 64px;
+      font-weight: 200;
+      letter-spacing: -2px;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .value-label {
+      font-size: 12px;
+      opacity: 0.5;
+      letter-spacing: 1px;
+    }
+
+    /* Progress Ring */
+    .progress-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 180px;
+      height: 180px;
+    }
+
+    .progress-ring circle {
+      fill: none;
+      stroke-width: 3;
+      stroke-linecap: round;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+    }
+
+    .progress-ring .bg {
+      stroke: rgba(255, 255, 255, 0.1);
+    }
+
+    .progress-ring .fill {
+      stroke: url(#gradient);
+      transition: stroke-dashoffset 0.3s ease;
     }
 
     /* Settings Button */
     .settings-btn {
       position: absolute;
-      top: 12px;
-      right: 12px;
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.08);
+      top: 16px;
+      right: 16px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
       border: none;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s ease;
-      -webkit-app-region: no-drag;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
     }
 
     .settings-btn:hover {
-      background: rgba(255, 255, 255, 0.15);
-      transform: rotate(30deg);
+      background: rgba(255, 255, 255, 0.2);
+      transform: rotate(90deg);
     }
 
     .settings-btn svg {
-      width: 16px;
-      height: 16px;
-      fill: rgba(255, 255, 255, 0.7);
+      width: 18px;
+      height: 18px;
+      fill: white;
+    }
+
+    /* Mode Toggle */
+    .mode-toggle {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .mode-btn {
+      padding: 8px 16px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(10px);
+    }
+
+    .mode-btn.active {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-color: transparent;
+    }
+
+    .mode-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .mode-btn.active:hover {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      opacity: 0.9;
     }
 
     /* Settings Panel */
@@ -156,38 +189,42 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(20, 20, 20, 0.98);
-      border-radius: 16px;
-      padding: 20px;
+      background: var(--bg);
+      backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 24px;
       display: none;
       flex-direction: column;
       overflow-y: auto;
-      -webkit-app-region: no-drag;
+      animation: slideIn 0.3s ease;
     }
 
     .settings-panel.open {
       display: flex;
     }
 
+    @keyframes slideIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
     .settings-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 20px;
-      padding-bottom: 16px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 24px;
     }
 
     .settings-title {
-      font-size: 16px;
+      font-size: 20px;
       font-weight: 600;
     }
 
     .close-btn {
-      width: 28px;
-      height: 28px;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.08);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
       border: none;
       cursor: pointer;
       display: flex;
@@ -197,7 +234,7 @@
     }
 
     .close-btn:hover {
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.2);
     }
 
     .settings-section {
@@ -208,7 +245,7 @@
       font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: 0.8px;
+      letter-spacing: 1px;
       opacity: 0.5;
       margin-bottom: 12px;
     }
@@ -217,8 +254,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
 
     .setting-row:last-child {
@@ -226,206 +263,310 @@
     }
 
     .setting-label {
-      font-size: 13px;
-      opacity: 0.85;
+      font-size: 14px;
+      opacity: 0.9;
     }
 
     .setting-control {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 12px;
     }
 
-    /* Select Dropdown */
-    select.setting-select {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 6px;
-      color: #fff;
-      padding: 6px 10px;
-      font-size: 12px;
-      cursor: pointer;
+    select, input[type="range"] {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      color: white;
+      padding: 8px 12px;
+      font-size: 13px;
       outline: none;
+      cursor: pointer;
     }
 
-    select.setting-select:hover {
-      background: rgba(255, 255, 255, 0.12);
+    select:hover, input[type="range"]:hover {
+      background: rgba(255, 255, 255, 0.15);
     }
 
-    /* Range Slider */
     input[type="range"] {
       -webkit-appearance: none;
       width: 100px;
       height: 4px;
-      background: rgba(255, 255, 255, 0.15);
-      border-radius: 2px;
-      outline: none;
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      padding: 0;
     }
 
     input[type="range"]::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 14px;
-      height: 14px;
-      background: #667eea;
+      width: 16px;
+      height: 16px;
+      background: var(--primary);
       border-radius: 50%;
       cursor: pointer;
     }
 
     .range-value {
-      font-size: 11px;
+      font-size: 12px;
       opacity: 0.6;
-      min-width: 30px;
+      min-width: 35px;
+      text-align: center;
+    }
+
+    /* Theme Selector */
+    .theme-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .theme-option {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 12px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .theme-option:hover {
+      transform: scale(1.1);
+    }
+
+    .theme-option.active {
+      border-color: white;
+      box-shadow: 0 0 0 2px var(--primary);
+    }
+
+    .theme-option .check {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 16px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .theme-option.active .check {
+      opacity: 1;
+    }
+
+    /* Gesture Preview */
+    .gesture-preview-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      margin-top: 8px;
+    }
+
+    .gesture-preview {
+      width: 80px;
+      height: 80px;
+      border: 2px dashed rgba(255, 255, 255, 0.2);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      transition: all 0.3s ease;
+    }
+
+    .gesture-preview.active {
+      border-color: var(--accent);
+      background: rgba(0, 212, 255, 0.1);
+    }
+
+    .gesture-preview.learned {
+      border-color: #00ff88;
+      background: rgba(0, 255, 136, 0.1);
+    }
+
+    .gesture-hint {
+      font-size: 12px;
+      opacity: 0.5;
       text-align: center;
     }
 
     /* Toggle Switch */
     .toggle {
       position: relative;
-      width: 36px;
-      height: 20px;
+      width: 44px;
+      height: 24px;
       background: rgba(255, 255, 255, 0.15);
-      border-radius: 10px;
+      border-radius: 12px;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: background 0.3s;
     }
 
     .toggle.active {
-      background: #667eea;
+      background: var(--primary);
     }
 
     .toggle::after {
       content: '';
       position: absolute;
-      width: 16px;
-      height: 16px;
-      background: #fff;
+      width: 20px;
+      height: 20px;
+      background: white;
       border-radius: 50%;
       top: 2px;
       left: 2px;
-      transition: transform 0.2s;
+      transition: transform 0.3s ease;
     }
 
     .toggle.active::after {
-      transform: translateX(16px);
-    }
-
-    /* Gesture Preview */
-    .gesture-preview {
-      width: 80px;
-      height: 80px;
-      border: 2px dashed rgba(255, 255, 255, 0.2);
-      border-radius: 12px;
-      margin: 12px auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 24px;
-      opacity: 0.6;
-    }
-
-    .gesture-preview.active {
-      border-color: #667eea;
-      opacity: 1;
+      transform: translateX(20px);
     }
 
     /* Action Buttons */
     .btn-group {
       display: flex;
-      gap: 8px;
-      margin-top: 20px;
+      gap: 12px;
+      margin-top: 24px;
     }
 
     .btn {
       flex: 1;
-      padding: 10px;
-      border-radius: 8px;
+      padding: 12px;
+      border-radius: 12px;
       border: none;
-      font-size: 12px;
+      font-size: 14px;
       font-weight: 500;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.2s ease;
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #fff;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
     }
 
     .btn-primary:hover {
       opacity: 0.9;
-      transform: translateY(-1px);
+      transform: translateY(-2px);
     }
 
     .btn-secondary {
-      background: rgba(255, 255, 255, 0.08);
-      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
     }
 
     .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.15);
     }
 
-    /* Toast Notification */
+    /* Toast */
     .toast {
       position: fixed;
-      bottom: 20px;
+      bottom: 24px;
       left: 50%;
       transform: translateX(-50%) translateY(100px);
       background: rgba(0, 0, 0, 0.8);
-      color: #fff;
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-size: 12px;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 12px;
+      font-size: 13px;
       opacity: 0;
       transition: all 0.3s ease;
       pointer-events: none;
+      backdrop-filter: blur(10px);
     }
 
     .toast.show {
       opacity: 1;
       transform: translateX(-50%) translateY(0);
     }
+
+    /* Swipe indicator */
+    .swipe-indicator {
+      position: absolute;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 28px;
+      opacity: 0;
+      transition: all 0.2s ease;
+      pointer-events: none;
+    }
+
+    .swipe-indicator.visible {
+      opacity: 1;
+      animation: swipeAnim 0.4s ease;
+    }
+
+    @keyframes swipeAnim {
+      0% { transform: translateX(-50%) translateY(10px); opacity: 0; }
+      50% { transform: translateX(-50%) translateY(-5px); opacity: 1; }
+      100% { transform: translateX(-50%) translateY(0); opacity: 0; }
+    }
   </style>
 </head>
 <body>
-  <div class="swipe-indicator" id="swipeIndicator"></div>
-  
-  <div class="container">
+  <!-- Three.js Canvas -->
+  <div id="canvas-container"></div>
+
+  <!-- SVG Gradient Definition -->
+  <svg width="0" height="0">
+    <defs>
+      <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="var(--primary)" />
+        <stop offset="100%" stop-color="var(--secondary)" />
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <!-- UI Overlay -->
+  <div class="ui-overlay">
+    <!-- Mode Toggle -->
+    <div class="mode-toggle">
+      <button class="mode-btn active" data-mode="brightness">☀️ Brightness</button>
+      <button class="mode-btn" data-mode="volume">🔊 Volume</button>
+    </div>
+
     <!-- Settings Button -->
-    <button class="settings-btn" id="settingsBtn" title="Settings">
+    <button class="settings-btn" id="settingsBtn">
       <svg viewBox="0 0 24 24">
         <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
       </svg>
     </button>
 
-    <div class="container-content" id="containerContent">
-      <div class="logo">☀️</div>
-      <div class="title">Just Slip</div>
-      <div class="brightness-display" id="brightnessValue">50%</div>
-      <div class="brightness-label">Screen Brightness</div>
-      <div class="progress-bar">
-        <div class="progress-fill" id="progressFill" style="width: 50%"></div>
+    <!-- Main Display -->
+    <div class="main-display">
+      <div class="mode-indicator">
+        <span class="icon" id="modeIcon">☀️</span>
+        <span id="modeText">Brightness</span>
       </div>
-      <div class="hint">
-        <span id="gestureHint">Swipe ↑↓ on trackpad</span>
-        &nbsp;or&nbsp; <kbd>⌃</kbd><kbd>⌥</kbd><kbd>↑↓</kbd>
-      </div>
+      <div class="value-display" id="valueDisplay">50%</div>
+      <div class="value-label" id="valueLabel">Screen Brightness</div>
     </div>
+
+    <!-- Progress Ring -->
+    <svg class="progress-ring" viewBox="0 0 180 180">
+      <circle class="bg" cx="90" cy="90" r="80"></circle>
+      <circle class="fill" id="progressCircle" cx="90" cy="90" r="80" 
+              stroke-dasharray="502.65" stroke-dashoffset="251.33"></circle>
+    </svg>
+
+    <!-- Swipe Indicator -->
+    <div class="swipe-indicator" id="swipeIndicator">↕</div>
 
     <!-- Settings Panel -->
     <div class="settings-panel" id="settingsPanel">
       <div class="settings-header">
         <div class="settings-title">Settings</div>
-        <button class="close-btn" id="closeSettings">
-          <svg width="12" height="12" viewBox="0 0 12 12">
-            <path d="M1.5 1.5l9 9M10.5 1.5l-9 9" stroke="currentColor" stroke-width="1.5" fill="none"/>
-          </svg>
-        </button>
+        <button class="close-btn" id="closeSettings">✕</button>
       </div>
 
       <!-- Gesture Settings -->
       <div class="settings-section">
-        <div class="section-title">Gesture</div>
+        <div class="section-title">Gesture Control</div>
         
         <div class="setting-row">
           <span class="setting-label">Direction</span>
@@ -448,8 +589,13 @@
         </div>
 
         <div class="setting-row">
-          <span class="setting-label">Preview</span>
+          <span class="setting-label">Learn from First Swipe</span>
+          <div class="toggle" id="toggleLearn"></div>
+        </div>
+
+        <div class="gesture-preview-container">
           <div class="gesture-preview" id="gesturePreview">👆</div>
+          <div class="gesture-hint" id="gestureHint">Swipe to learn your gesture</div>
         </div>
       </div>
 
@@ -482,23 +628,54 @@
         </div>
       </div>
 
-      <!-- UI Settings -->
+      <!-- Volume Settings -->
       <div class="settings-section">
-        <div class="section-title">Interface</div>
+        <div class="section-title">Volume</div>
         
         <div class="setting-row">
-          <span class="setting-label">Show Notification</span>
-          <div class="toggle" id="toggleNotification"></div>
+          <span class="setting-label">Step Size</span>
+          <div class="setting-control">
+            <input type="range" id="volumeStep" min="1" max="20" value="5">
+            <span class="range-value" id="volumeStepValue">5%</span>
+          </div>
         </div>
 
         <div class="setting-row">
-          <span class="setting-label">Notification Position</span>
+          <span class="setting-label">Min Volume</span>
           <div class="setting-control">
-            <select class="setting-select" id="notifPosition">
-              <option value="top">Top</option>
-              <option value="center">Center</option>
-              <option value="bottom">Bottom</option>
-            </select>
+            <input type="range" id="volumeMin" min="0" max="50" value="0">
+            <span class="range-value" id="volumeMinValue">0%</span>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">Max Volume</span>
+          <div class="setting-control">
+            <input type="range" id="volumeMax" min="50" max="100" value="100">
+            <span class="range-value" id="volumeMaxValue">100%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Theme Settings -->
+      <div class="settings-section">
+        <div class="section-title">Theme</div>
+        
+        <div class="theme-grid">
+          <div class="theme-option active" data-theme="ocean" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+            <span class="check">✓</span>
+          </div>
+          <div class="theme-option" data-theme="sunset" style="background: linear-gradient(135deg, #f093fb, #f5576c);">
+            <span class="check">✓</span>
+          </div>
+          <div class="theme-option" data-theme="forest" style="background: linear-gradient(135deg, #11998e, #38ef7d);">
+            <span class="check">✓</span>
+          </div>
+          <div class="theme-option" data-theme="midnight" style="background: linear-gradient(135deg, #2c3e50, #4ca1af);">
+            <span class="check">✓</span>
+          </div>
+          <div class="theme-option" data-theme="neon" style="background: linear-gradient(135deg, #ff00ff, #00ffff);">
+            <span class="check">✓</span>
           </div>
         </div>
       </div>

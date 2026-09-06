@@ -1,126 +1,151 @@
-# 🌐 语言选择 | Language Selection | 言語選択
-
-<div align="center">
-
-| 🇺🇸 English | 🇨🇳 简体中文 | 🇹🇼 繁體中文 | 🇯🇵 日本語 | 🇰🇷 한국어 |
-|:---:|:---:|:---:|:---:|:---:|
-| [English](README.md) | [简体中文](README_zh-CN.md) | [繁體中文](README_zh-TW.md) | [日本語](README_ja.md) | [한국어](README_ko.md) |
-
-| 🇪🇸 Español | 🇫🇷 Français | 🇩🇪 Deutsch | 🇷🇺 Русский | 🇧🇷 Português |
-|:---:|:---:|:---:|:---:|:---:|
-| [Español](README_es.md) | [Français](README_fr.md) | [Deutsch](README_de.md) | [Русский](README_ru.md) | [Português](README_pt-BR.md) |
-
-| 🇮🇹 Italiano | 🇹🇷 Türkçe | 🇸🇦 العربية | 🇮🇳 हिन्दी | 🇻🇳 Tiếng Việt |
-|:---:|:---:|:---:|:---:|:---:|
-| [Italiano](README_it.md) | [Türkçe](README_tr.md) | [العربية](README_ar.md) | [हिन्दी](README_hi.md) | [Tiếng Việt](README_vi.md) |
-
-</div>
-
----
-
-<a id="english"></a>
-
-# Just Slip
+# Just Slip v3.0.0
 
 [![Latest Version](https://img.shields.io/github/v/release/2ws7gfh8z5-dot/just-slip)](https://github.com/2ws7gfh8z5-dot/just-slip/releases)
 [![Downloads](https://img.shields.io/github/downloads/2ws7gfh8z5-dot/just-slip/total)](https://github.com/2ws7gfh8z5-dot/just-slip/releases)
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-blue)](#)
 [![License](https://img.shields.io/github/license/2ws7gfh8z5-dot/just-slip)](LICENSE)
+[![Three.js](https://img.shields.io/badge/3D-Three.js-green)](https://threejs.org/)
 
-Control screen brightness with trackpad gestures. A minimal, cross-platform Electron application.
+**Control screen brightness AND volume with customizable trackpad gestures. Features a stunning Three.js 3D interface with learning capabilities.**
 
-## ✨ Features
+## ✨ What's New in v3.0.0
 
-- **Trackpad Gestures**: Swipe up to increase brightness, swipe down to decrease
-- **Keyboard Shortcuts**: 
-  - macOS: `Cmd+Opt+↑/↓` or `Cmd+Shift+↑/↓`
-  - Windows/Linux: `Ctrl+Alt+↑/↓` or `Ctrl+Shift+↑/↓`
-- **Cross-Platform**: Works on macOS, Linux, and Windows
-- **System Tray**: Runs unobtrusively in the background
-- **Minimal UI**: Clean, unobtrusive brightness indicator
+### 🎮 Three.js 3D Interface
+- Interactive 3D sphere that responds to your actions
+- Dynamic particle effects and lighting
+- Smooth animations and transitions
+- Beautiful gradient colors that change with value
+
+### 🎛️ Dual Mode Control
+- **Brightness Mode**: Control screen brightness (0-100%)
+- **Volume Mode**: Control system volume (0-100%)
+- One-click switching between modes
+
+### 🧠 Smart Gesture Learning
+- **Auto-Learn**: Just swipe once and the app learns your gesture pattern
+- **Direction Aware**: Works with any swipe direction
+- **Distance Based**: Larger swipes = bigger changes
+- **Memory**: Remembers your learned gestures forever
+
+### 🎨 5 Beautiful Themes
+- **Ocean** - Blue-purple gradient (default)
+- **Sunset** - Pink-orange gradient
+- **Forest** - Green-cyan gradient
+- **Midnight** - Deep blue gradient
+- **Neon** - Cyberpunk pink-cyan
 
 ## 📦 Installation
 
 ### Download Pre-built Releases
 
-Visit the [Releases page](https://github.com/2ws7gfh8z5-dot/just-slip/releases) to download the appropriate package:
-
-| Platform | File Format | Architecture |
-|----------|-------------|--------------|
-| macOS | `.dmg` | Intel (x64) & Apple Silicon (arm64) |
-| Windows | `.exe` | x64 |
-| Linux | `.AppImage` | x64 |
+| Platform | File | Size | Download |
+|----------|------|------|----------|
+| **macOS** | `.dmg` | 450 MB | [Download](https://github.com/2ws7gfh8z5-dot/just-slip/releases/download/v3.0.0/Just-Slip-v3.0.0-mac.dmg) |
+| **Windows** | `.exe` | 80 MB | [Download](https://github.com/2ws7gfh8z5-dot/just-slip/releases/download/v3.0.0/Just-Slip-3.0.0-windows-x64.exe) |
+| **Linux** | `.AppImage` | 120 MB | [Download](https://github.com/2ws7gfh8z5-dot/just-slip/releases/download/v3.0.0/Just-Slip-3.0.0-linux-x64.AppImage) |
 
 ### Install from Source
 
 ```bash
-# Clone the repository
 git clone https://github.com/2ws7gfh8z5-dot/just-slip.git
 cd just-slip
-
-# Install dependencies
 npm install
-
-# Build
 npm run build
-
-# Run
 npm start
-```
-
-### Build for Distribution
-
-```bash
-# Build for all platforms
-npm run package:all
-
-# Or build for specific platform
-npm run package:mac    # macOS DMG
-npm run package:win    # Windows Installer
-npm run package:linux  # Linux AppImage
 ```
 
 ## 🚀 Usage
 
-1. **Launch** Just Slip from your Applications folder (macOS) or Start Menu (Windows/Linux)
+### Basic Controls
+1. **Launch** Just Slip from Applications (macOS) or Start Menu (Windows/Linux)
 2. **First run**: Grant accessibility permissions when prompted
-   - macOS: `System Settings → Privacy & Security → Accessibility`
-   - Windows: No additional permissions needed
-   - Linux: May need sudo for `/sys/class/backlight` access
-3. **Adjust brightness** using:
-   - Trackpad: Swipe up/down
-   - Keyboard: Use the shortcuts listed above
-   - System tray: Click the icon → Brightness submenu
+3. **Adjust**: Swipe on trackpad or use keyboard shortcuts
+
+### Keyboard Shortcuts
+- **Increase**: `Cmd+Opt+↑` (macOS) / `Ctrl+Alt+↑` (Windows/Linux)
+- **Decrease**: `Cmd+Opt+↓` (macOS) / `Ctrl+Alt+↓` (Windows/Linux)
+
+### Gesture Learning
+1. Open **Settings** (gear icon)
+2. Enable **"Learn from First Swipe"**
+3. Perform your desired swipe gesture
+4. The app remembers this gesture pattern forever
+
+### Switching Modes
+- Click **☀️ Brightness** or **🔊 Volume** button in top-left
+- Each mode has independent settings
+
+### Changing Themes
+1. Open Settings
+2. Click any theme color square
+3. Changes apply immediately
+
+## 📁 Settings
+
+### Gesture Settings
+- **Direction**: Vertical / Horizontal / Diagonal / Any
+- **Sensitivity**: 10-80px threshold
+- **Learn Mode**: Auto-detect and remember your gestures
+
+### Brightness Settings
+- **Step Size**: 1-20% per gesture
+- **Min/Max**: Set brightness limits
+
+### Volume Settings
+- **Step Size**: 1-20% per gesture
+- **Min/Max**: Set volume limits
+
+### Theme Options
+- 5 pre-configured color schemes
+- Apply instantly without restart
 
 ## 🐛 Troubleshooting
 
 ### macOS Issues
-
-- **Brightness not changing**: Ensure Just Slip is in Accessibility permissions
-- **Quartz framework not found**: Make sure you have Xcode Command Line Tools installed:
+- **Volume not working**: Ensure Just Slip is in Accessibility permissions
+- **3D not rendering**: Ensure Metal is enabled (default on modern Macs)
+- **Quartz errors**: Make sure Xcode Command Line Tools are installed:
   ```bash
   xcode-select --install
   ```
 
-### Linux Issues
-
-- **Permissions denied**: Add your user to the appropriate group or use `sudo`
-- **xrandr not working**: Install it:
-  ```bash
-  # Ubuntu/Debian
-  sudo apt install xrandr
-  
-  # Fedora
-  sudo dnf install xrandr
-  
-  # Arch
-  sudo pacman -S xorg-xrandr
-  ```
-
 ### Windows Issues
-
-- **Admin rights required**: Run as administrator for WMI access
+- **Volume not working**: Run as administrator for WMI access
 - **DDC/CI support**: Install [ddcutil](https://github.com/binhex/ddcutil) for external monitor control
+
+### Linux Issues
+- **Permissions denied**: Add user to appropriate group or use `sudo`
+- **Volume control**: May need `amixer` or `pactl` depending on audio system
+
+## 🔧 Technical Details
+
+### Architecture
+- **Main Process**: Electron + Node.js
+- **Renderer**: TypeScript + Three.js r128
+- **Backend**: Python brightness.py bridge
+- **Storage**: JSON config in `~/Library/Application Support/Just Slip/`
+
+### Dependencies
+- Electron 28.x
+- Three.js 0.160.0
+- Python 3.x with pyobjc (macOS)
+
+### File Structure
+```
+just-slip/
+├── src/
+│   ├── main/
+│   │   ├── main.js          # Main process entry
+│   │   ├── settings.js      # Settings manager
+│   │   ├── gesture-engine.js # Gesture detection & learning
+│   │   ├── brightness.py    # Cross-platform brightness control
+│   │   └── preload.js       # IPC bridge
+│   └── renderer/
+│       ├── index.html       # 3D UI template
+│       └── renderer.ts      # Three.js + UI logic
+├── dist/                    # Compiled output
+└── release/                 # Built packages
+```
 
 ## 📄 License
 
@@ -128,10 +153,11 @@ MIT License - see [LICENSE](LICENSE) for details
 
 ## 🙏 Acknowledgments
 
-- [Electron](https://www.electronjs.org/) for the cross-platform framework
+- [Electron](https://www.electronjs.org/) for cross-platform framework
+- [Three.js](https://threejs.org/) for 3D rendering
 - [pyobjc](https://pyobjc.readthedocs.io/) for macOS Quartz bindings
 - [xrandr](https://www.x.org/releases/X11R7.6/doc/man/man1/xrandr.1.xhtml) for Linux display control
 
 ---
 
-**Built with ❤️ by [Huaziyi](https://github.com/2ws7gfh8z5-dot)**
+**Built with ❤️ and Three.js by [Huaziyi](https://github.com/2ws7gfh8z5-dot)**
