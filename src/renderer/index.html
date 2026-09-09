@@ -680,6 +680,58 @@
         </div>
       </div>
 
+      <!-- Eye Control (eye searching system) -->
+      <div class="settings-section">
+        <div class="section-title">Eye Control (Eye Searching System)</div>
+
+        <div class="setting-row">
+          <span class="setting-label">Enable Eye Tracking</span>
+          <div class="setting-control">
+            <div class="toggle" id="toggleEye"></div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">Vertical eye → Brightness</span>
+          <div class="setting-control">
+            <input type="checkbox" id="eyeVert" checked>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">Horizontal eye → Volume</span>
+          <div class="setting-control">
+            <input type="checkbox" id="eyeHoriz" checked>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">Sensitivity</span>
+          <div class="setting-control">
+            <input type="range" id="eyeSensitivity" min="1" max="10" value="4">
+            <span class="range-value" id="eyeSensitivityValue">0.04</span>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">Status</span>
+          <div class="setting-control">
+            <span id="eyeStatus" data-status="idle" style="font-size:12px;opacity:0.7;">Eye system off</span>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <span class="setting-label">Data</span>
+          <div class="setting-control">
+            <span style="font-size:11px;opacity:0.5;">Local only, never uploaded</span>
+          </div>
+        </div>
+
+        <div class="btn-group" style="margin-top:16px;">
+          <button class="btn btn-secondary" id="eyeCalibrateBtn">Re-calibrate</button>
+        </div>
+      </div>
+
       <!-- Action Buttons -->
       <div class="btn-group">
         <button class="btn btn-secondary" id="resetBtn">Reset</button>
@@ -689,6 +741,7 @@
   </div>
 
   <div class="toast" id="toast"></div>
+  <script src="eye.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

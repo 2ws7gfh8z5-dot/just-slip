@@ -5,6 +5,8 @@
 declare const electronAPI: any;
 declare const THREE: any;
 
+// EyeTracker is provided globally by eye.ts (loaded before this file).
+
 // State
 let currentValue = 50;
 let settings: any = null;
@@ -15,6 +17,12 @@ let touchStartPos = { x: 0, y: 0 };
 let touchStartTime = 0;
 let isTouchActive = false;
 let scene: any, camera: any, renderer: any, mainMesh: any, glowMesh: any, particles: any;
+
+// Eye tracking (eye searching system) — parallel to trackpad gestures
+let eyeTracker: any = null;
+let eyeFrames: any[] = [];
+let eyeCalibrating = false;
+let lastEyeEmit = 0;   // throttle guard (ms)
 
 // Themes
 const THEMES: any = {
@@ -33,6 +41,9 @@ async function init() {
     updateUI();
     setupEventListeners();
     animate();
+
+    // Bring up the eye system if enabled (first install requests camera)
+    await firstRunEyeSetup();
   } catch (error) {
     console.error('Init failed:', error);
   }
@@ -216,6 +227,22 @@ function loadSettingsToUI() {
   setVal('volumeMax', settings.volume?.max || 100);
   setTxt('volumeMaxValue', `${settings.volume?.max || 100}%`);
 
+  // Eye control (eye searching system)
+  const eyeToggle = document.getElementById('toggleEye');
+  if (eyeToggle) eyeToggle.classList.toggle('active', !!settings.eye?.enabled);
+  const vertChk = document.getElementById('eyeVert') as HTMLInputElement | null;
+  if (vertChk) vertChk.checked = settings.eye?.vertical !== false;
+  const horizChk = document.getElementById('eyeHoriz') as HTMLInputElement | null;
+  if (horizChk) horizChk.checked = settings.eye?.horizontal !== false;
+  const eyeSens = document.getElementById('eyeSensitivity') as HTMLInputElement | null;
+  if (eyeSens) {
+    const s = settings.eye?.sensitivity ?? 0.04;
+    eyeSens.value = String(Math.round(s * 100));
+    const ev = document.getElementById('eyeSensitivityValue');
+    if (ev) ev.textContent = s.toFixed(2);
+  }
+  updateEyeStatusUI(settings.eye?.status || 'idle');
+
   const learnToggle = document.getElementById('toggleLearn');
   if (learnToggle) {
     learnToggle.classList.toggle('active', !!settings.gesture?.learnFromFirstSwipe);
@@ -290,6 +317,12 @@ function getSettingsFromUI(): any {
     },
     ui: {
       theme: (document.querySelector('.theme-option.active') as HTMLElement)?.dataset.theme || 'ocean',
+    },
+    eye: {
+      enabled: getBool('toggleEye'),
+      vertical: (document.getElementById('eyeVert') as HTMLInputElement | null)?.checked !== false,
+      horizontal: (document.getElementById('eyeHoriz') as HTMLInputElement | null)?.checked !== false,
+      sensitivity: (parseInt(getVal('eyeSensitivity'), 10) / 100) || 0.04,
     }
   };
 }
@@ -363,6 +396,37 @@ function setupEventListeners() {
         txtEl.textContent = `${e.target.value}${suffix}`;
       }
     });
+  });
+
+  // Eye control inputs (eye searching system)
+  const eyeSens = document.getElementById('eyeSensitivity') as HTMLInputElement | null;
+  if (eyeSens) {
+    eyeSens.addEventListener('input', (e: any) => {
+      const val = (parseInt(e.target.value, 10) / 100).toFixed(2);
+      const txt = document.getElementById('eyeSensitivityValue');
+      if (txt) txt.textContent = val;
+      if (eyeTracker) eyeTracker.sensitivity = parseFloat(val);
+    });
+  }
+  const eyeToggle = document.getElementById('toggleEye') as HTMLElement | null;
+  if (eyeToggle) {
+    eyeToggle.addEventListener('click', async () => {
+      const nowActive = !eyeToggle.classList.contains('active');
+      eyeToggle.classList.toggle('active', nowActive);
+      await electronAPI.eyeSetEnabled(nowActive);
+      settings.eye = { ...(settings?.eye || {}), enabled: nowActive };
+      if (nowActive) await startEyeSystem();
+      else stopEyeSystem();
+    });
+  }
+  const vertChk = document.getElementById('eyeVert') as HTMLInputElement | null;
+  if (vertChk) vertChk.addEventListener('change', () => { if (eyeTracker) eyeTracker.axes.vertical = vertChk.checked; });
+  const horizChk = document.getElementById('eyeHoriz') as HTMLInputElement | null;
+  if (horizChk) horizChk.addEventListener('change', () => { if (eyeTracker) eyeTracker.axes.horizontal = horizChk.checked; });
+  const recalBtn = document.getElementById('eyeCalibrateBtn') as HTMLElement | null;
+  if (recalBtn) recalBtn.addEventListener('click', () => {
+    if (eyeTracker && eyeTracker.running) beginEyeCalibration();
+    else showToast('Enable eye tracking first');
   });
 
   // Keyboard
@@ -505,6 +569,124 @@ function showSwipeIndicator(direction: string) {
   indicator.textContent = arrows[direction] || '↕';
   indicator.classList.add('visible');
   setTimeout(() => indicator.classList.remove('visible'), 400);
+}
+
+// ========== EYE SEARCHING SYSTEM ==========
+
+/**
+ * Bring up the eye system: request camera permission, start FaceMesh, and
+ * (on first run) collect frames to build the user's personal baseline.
+ * Runs in parallel with trackpad gestures.
+ */
+async function startEyeSystem() {
+  if (typeof EyeTracker === 'undefined') {
+    showToast('Eye system module unavailable');
+    return;
+  }
+  if (eyeTracker) { eyeTracker.stop(); }
+
+  const eyeSettings = settings?.eye || {};
+  const api = {
+    eyeAdjust: (payload: any) => electronAPI.eyeAdjust(payload),
+    eyeCalibrate: (baseline: any) => electronAPI.eyeCalibrate(baseline),
+    eyeSaveCalibration: (cal: any) => electronAPI.eyeSaveCalibration(cal)
+  };
+
+  eyeTracker = new EyeTracker(api, {
+    onDelta: async ({ axis, delta }: any) => {
+      // Throttle: the main process already applies a scaled step; don't spam
+      const now = Date.now();
+      if (now - lastEyeEmit < 120) return;
+      lastEyeEmit = now;
+      const next = await electronAPI.eyeAdjust({ axis, delta });
+      if (axis === 'vertical') updateValueDisplay(next);
+      else refreshVolumeDisplay(next);
+    },
+    onStatus: (status: string) => {
+      updateEyeStatusUI(status);
+      settings.eye = { ...(settings?.eye || {}), status };
+    },
+    onFrame: (pts: any) => {
+      if (eyeCalibrating) {
+        eyeFrames.push({ points: pts, t: Date.now() });
+        if (eyeFrames.length >= 60) finishEyeCalibration();
+      }
+    }
+  });
+
+  eyeTracker.sensitivity = eyeSettings.sensitivity || 0.04;
+  eyeTracker.hysteresis = eyeSettings.hysteresis || 0.02;
+  eyeTracker.axes.vertical = settings?.eye?.vertical !== false;
+  eyeTracker.axes.horizontal = settings?.eye?.horizontal !== false;
+
+  // Load a saved baseline so the user's session is personal
+  const saved = await electronAPI.eyeGetCalibration();
+  if (saved && saved.baseline) eyeTracker.setBaseline(saved.baseline);
+
+  // Auto-start training on first install (collect frames for the local model)
+  const hasCal = await electronAPI.eyeGetCalibration();
+  if (!(hasCal && hasCal.calibration)) beginEyeCalibration();
+
+  try {
+    await eyeTracker.start();
+  } catch (err: any) {
+    showToast('Camera not available: ' + (err?.message || 'permission denied'));
+    console.error('Eye tracker start failed:', err);
+  }
+}
+
+function stopEyeSystem() {
+  if (eyeTracker) { eyeTracker.stop(); eyeTracker = null; }
+  eyeCalibrating = false;
+  eyeFrames = [];
+  updateEyeStatusUI('idle');
+  settings.eye = { ...(settings?.eye || {}), status: 'idle' };
+}
+
+function beginEyeCalibration() {
+  if (!eyeTracker || !eyeTracker.running) return;
+  eyeCalibrating = true;
+  eyeFrames = [];
+  updateEyeStatusUI('calibrating');
+  showToast('Gaze straight at the screen to calibrate…');
+}
+
+function finishEyeCalibration() {
+  if (!eyeCalibrating) return;
+  eyeCalibrating = false;
+  eyeTracker.collectCalibration(eyeFrames);
+  eyeFrames = [];
+  updateEyeStatusUI('calibrated');
+  showToast('Eye baseline saved locally ✓');
+}
+
+/** First-install flow: request camera permission, then start collecting. */
+async function firstRunEyeSetup() {
+  if (!settings?.eye?.enabled) return;
+  await startEyeSystem();
+}
+
+function updateEyeStatusUI(status: string) {
+  const el = document.getElementById('eyeStatus');
+  if (!el) return;
+  const labels: any = {
+    'idle': 'Eye system off',
+    'requesting-camera': 'Requesting camera…',
+    'loading-model': 'Loading eye model…',
+    'model-ready': 'Model ready',
+    'running': 'Eye tracking active',
+    'no-face': 'Looking for your face…',
+    'tracking': 'Eye tracking',
+    'calibrating': 'Calibrating…',
+    'calibrated': 'Calibrated ✓',
+    'stopped': 'Stopped'
+  };
+  el.textContent = labels[status] || status;
+  el.setAttribute('data-status', status);
+}
+
+function refreshVolumeDisplay(value: number) {
+  if (currentMode === 'volume') updateValueDisplay(value);
 }
 
 // Start

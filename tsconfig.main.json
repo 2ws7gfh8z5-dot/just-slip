@@ -7,7 +7,12 @@
     "strict": false,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "allowJs": true,
+    "checkJs": false,
+    "declaration": false,
+    "sourceMap": false,
+    "noEmitOnError": false
   },
   "include": ["src/main/**/*"],
   "exclude": ["node_modules", "dist"]

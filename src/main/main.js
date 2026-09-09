@@ -11,6 +11,7 @@ const { execSync } = require('child_process');
 // Import modules
 const { settingsManager, setupSettingsHandlers, DEFAULT_SETTINGS } = require('./settings');
 const GestureEngine = require('./gesture-engine');
+const eyeTracker = require('./eye-tracker');
 
 // Get the path to the brightness control script
 const BRIGHTNESS_SCRIPT = path.join(__dirname, 'brightness.py');
@@ -186,6 +187,10 @@ let currentMode = MODES.BRIGHTNESS;
 let isRunning = false;
 let gestureEngine = new GestureEngine(settingsManager.get());
 
+// Dedicated controllers for the eye system (runs in parallel with gestures)
+let eyeBrightness = new BrightnessController();
+let eyeVolume = new VolumeController();
+
 function createMainWindow() {
   mainWindow = new BrowserWindow({
     width: 280,
@@ -306,6 +311,50 @@ function setupIpcHandlers() {
   });
 
   ipcMain.handle('gesture:getLearned', () => settingsManager.get('gesture.learnedPattern'));
+
+  // ========== EYE TRACKING (eye searching system) ==========
+  // Renderer sends a signed delta for one axis; we apply it to the
+  // matching controller. vertical->brightness, horizontal->volume.
+  ipcMain.handle('eye:adjust', ({ axis, delta }) => {
+    const section = axis === 'vertical' ? 'brightness' : 'volume';
+    const stepBase = settingsManager.get(`${section}.step`) || 5;
+    // Scale the step by how far the eye moved (delta in [-1,1])
+    const amt = Math.max(1, Math.round(Math.abs(delta) * stepBase * 2));
+    const controller = axis === 'vertical' ? eyeBrightness : eyeVolume;
+    const sign = Math.sign(delta) || 1;
+    const value = controller.getCurrent();
+    const next = sign > 0
+      ? Math.min(100, value + amt)
+      : Math.max(0, value - amt);
+    controller.set(next);
+    return next;
+  });
+
+  // Persist the user's personal baseline locally (never uploaded)
+  ipcMain.handle('eye:calibrate', (baseline) => {
+    settingsManager.set('eye.baseline', baseline);
+    return true;
+  });
+
+  ipcMain.handle('eye:saveCalibration', (cal) => {
+    settingsManager.set('eye.calibration', cal);
+    settingsManager.set('eye.hasCalibration', true);
+    const file = eyeTracker.persistEyeData(cal, []);
+    return { stored: true, file };
+  });
+
+  ipcMain.handle('eye:getCalibration', () => ({
+    baseline: settingsManager.get('eye.baseline'),
+    calibration: settingsManager.get('eye.calibration')
+  }));
+
+  // Enable/disable the parallel eye system
+  ipcMain.handle('eye:setEnabled', (enabled) => {
+    settingsManager.set('eye.enabled', !!enabled);
+    return !!enabled;
+  });
+
+  ipcMain.handle('eye:status', () => settingsManager.get('eye.status') || 'idle');
 
   // Window controls
   ipcMain.on('window:close', () => mainWindow?.close());

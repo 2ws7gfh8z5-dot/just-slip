@@ -33,6 +33,15 @@ const DEFAULT_SETTINGS = {
   advanced: {
     enableGesturePrediction: false,
     debounceMs: 100,
+  },
+  eye: {
+    enabled: false,             // parallel eye system on/off
+    sensitivity: 0.04,         // normalized pupil travel == full range
+    hysteresis: 0.02,          // dead zone
+    baseline: null,            // personal neutral 5-point calibration
+    calibration: null,         // persisted training data (LOCAL ONLY)
+    hasCalibration: false,
+    status: 'idle'             // idle|requesting-camera|loading-model|running|no-face|tracking
   }
 };
 
@@ -84,6 +93,9 @@ class SettingsManager {
     }
     if (loaded.advanced) {
       merged.advanced = { ...DEFAULT_SETTINGS.advanced, ...loaded.advanced };
+    }
+    if (loaded.eye) {
+      merged.eye = { ...DEFAULT_SETTINGS.eye, ...loaded.eye };
     }
     
     return merged;
